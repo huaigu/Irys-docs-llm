@@ -1,165 +1,2131 @@
-# Irys Documentation Summary (LLM_Full.txt)
+---
+/home/bojack/irys/irys_docs/build_d_features_balance-approvals.md ---
 
-This document provides a comprehensive summary of the Irys documentation files located in the `irys_docs/` directory.
+{
+  "title": "Irys | Balance Approvals",
+  "description": "Use balance approvals to share balances between multiple addresses. This helps to onboard users without requiring them to own tokens.",
+  "features": [
+    "You pay for transactions.",
+    "Users sign transactions."
+  ],
+  "details": {
+    "tokenRequirement": "Both approver and approvee must use the same token.",
+    "registration": "Are registered instantly upon upload completion.",
+    "transferability": "Are non-transferable.",
+    "expiration": "Can be configured to expire automatically."
+  },
+  "createApproval": {
+    "description": "To update an existing approval, create a new approval with the same address (it will overwrite the existing approval).",
+    "code": "const receipt = await irys.approval.createApproval({\n  amount: irys.utils.toAtomic(1), // Amount in atomic units\n  approvedAddress: \"<address>\",\n  expiresInSeconds: 100, // Expires in 100 seconds. Delete to remove expiration.\n});"
+  },
+  "uploadUsingApproval": {
+    "code": "const receipt = await irys.upload(\"Hirys World\", { upload: { paidBy: \"<address>\" } });"
+  },
+  "combineApprovalsAndTags": {
+    "code": "const uploadOptions = {\n  upload: {\n    paidBy: \"<address>\",\n  },\n  tags: [{ name: \"Content-Type\", value: \"text/plain\" }],\n};
+const receipt = await irys.upload(dataToUpload, uploadOptions);"
+  },
+  "revokeApproval": {
+    "code": "const receipt = await irys.approval.revokeApproval({ approvedAddress: \"<address>\" });"
+  },
+  "getBalancesApprovedToUse": {
+    "code": "const approvals = await irys.approval.getApprovals({\n  payingAddresses: [\"<address>\"],\n});"
+  },
+  "getFirst100Approvals": {
+    "code": "const approvals = await irys.approval.getApprovals({});"
+  },
+  "returnType": "{\n  amount: string; // Amount approved in atomic units\n  payingAddress: string; // Address of the payer's wallet\n  approvedAddress: string; // Address of the wallet that received the approval\n  expiresBy: number; // Timestamp (in milliseconds) when approval expires\n  timestamp: number; // Timestamp (in milliseconds) when the approval was created\n  token: string; // Approved token\n}[];",
+  "getCreatedApprovals": {
+    "code": "const createdApprovals = irys.approval.getCreatedApprovals({\n  approvedAddresses: [\"<address>\"],\n});"
+  },
+  "getFirst100CreatedApprovals": {
+    "code": "const createdApprovals = irys.approval.getCreatedApprovals({});"
+  },
+  "getBalanceApprovalsViaHTTP": {
+    "description": "You can also request balance approvals via HTTP:",
+    "mainnetURL": "https://uploader.irys.xyz/account/approval?payingAddress=<...>&token=<...>&approvedAddress=<...>"
+  }
+}
 
 ---
+/home/bojack/irys/irys_docs/build_d_features_mutability.md ---
 
-### `build_d_features_balance-approvals.md`
+# Mutability
 
-**Summary:** This document explains the "Balance Approvals" feature, which allows users to share their Irys balance with other addresses. This is useful for onboarding users without requiring them to own tokens directly. The paying user can approve a certain amount to be spent by another user's address. The document provides code examples for creating, revoking, and querying approvals using the Irys SDK. It also shows the HTTP endpoint for querying approvals.
+Data on Irys is immutable. However, you can simulate mutability on using mutable references.
 
----
+With mutable references you create a single, static URL that is linked to a sequential series of transactions. You can add a new transaction to the series at any time, and the URL will always resolve to the most recent transaction in the chain.
 
-### `build_d_features_mutability.md`
+![](https://docs.irys.xyz/build/img/mutable-references.png)
 
-**Summary:** This document describes how to achieve data mutability on the otherwise immutable Irys network. It details the concept of "mutable references," where a static URL (`https://gateway.irys.xyz/mutable/:txId`) can point to a sequence of transactions. By uploading a new transaction with a `Root-TX` tag pointing to the original transaction ID, the URL will automatically resolve to the latest transaction in the chain. This is useful for dynamic NFTs, software distribution, and website hosting. A GraphQL query example is provided to retrieve the entire version chain.
+To create a mutable reference:
 
----
+1. Upload a base transaction to Irys and reference it using a URL in the following format `https://gateway.irys.xyz/mutable/:txId`
 
-### `build_d_features_onchain-folders.md`
+ℹ️
 
-**Summary:** This document explains "Onchain Folders," a feature for organizing Irys transactions using logical names instead of transaction IDs. A manifest file maps human-readable paths to specific transaction IDs. These folders can be created automatically using `uploadFolder()` in the SDK or manually by creating a map. The document also touches on "Mutable Onchain Folders," which allow for adding new files to an existing folder by updating the manifest in a transaction chain.
+Use a token-specific version of `getIrysUploader()` to connect to an Irys Bundler before uploading. Choose [one from here](https://docs.irys.xyz/build/d/sdk/setup).
 
----
+```bash
+const irysUploader = await getIrysUploader();
+const receiptOne = await irysUploader.upload("First TX");
+console.log(`TX 1 uploaded https://gateway.irys.xyz/mutable/${receiptOne.id}`);
+```
 
-### `build_d_features_receipts.md`
+2. Upload an addition to the series as a new transaction, and add a tag named `Root-TX` with the value of the original transaction ID.
 
-**Summary:** This document details Irys receipts, which provide cryptographic proof of the exact time a transaction was posted, accurate to the millisecond. Receipts are crucial for applications requiring strict ordering, like decentralized social media or messaging. The document explains the receipt format (a JSON object), how to verify a receipt's signature using the SDK, and that receipts can be permanently stored on Irys by re-uploading them.
+```bash
+const tags = [{ name: "Root-TX", value: receiptOne.id }];
+const receiptTwo = await irysUploader.upload("Second TX", { tags: tags });
+console.log(`TX 2 uploaded https://gateway.irys.xyz/mutable/${receiptOne.id}`);
+```
 
----
+The original URL ( `https://gateway.irys.xyz/mutable/:txId`) now resolves to the second transaction in the chain.
 
-### `build_d_features_supported-tokens.md`
+ℹ️
 
-**Summary:** This file provides a list of all supported cryptocurrencies for paying transaction fees on Irys, for both Mainnet and Devnet. It's structured as a JSON object with tables for each network. Each entry includes the token's blockchain, its symbol (e.g., ETH, MATIC, SOL), the parameter value to be used in the SDK/CLI, and its support status for different environments (Node.js, browser).
+When building a transaction chain, additions must be made using the same wallet that created the original transaction.
+This prevents unauthorized actors from maliciously modifying someone else’s transaction chain.
 
----
+## Granularity
 
-### `build_d_features_tags.md`
+Mutable references are based on Irys’s millisecond-accurate timestamps. You can publish multiple sequential updates to a given transaction and be confident the transaction served by the `/mutable/` endpoint will always be the most recent chronological one.
 
-**Summary:** This document explains the use of metadata tags in Irys transactions. Tags are key-value pairs that can be attached to any upload. They are indexed and queryable via GraphQL, making it easy to categorize and search for data. A common use case is the `Content-Type` tag, which tells browsers how to render a file. Users can add up to 20 tags per transaction.
+## Versions
 
----
+While the `https://gateway.irys.xyz/mutable/:txId` endpoint will always resolve to the most recent transaction in a chain, it is possible to directly access any transaction in a chain using the transaction’s ID and a URL in the format `https://gateway.irys.xyz/:id`
 
-### `build_d_graphql.md`
+You can query a version chain using GraphQL:
 
-**Summary:** This document provides instructions on how to query Irys transaction metadata using GraphQL. It specifies the GraphQL endpoint (`https://uploader.irys.xyz/graphql`) and details the available query arguments (e.g., `ids`, `owner`, `tags`, `timestamp`) and the fields returned in the results (e.g., `id`, `address`, `tags`, `receipt`). Sample queries are included to demonstrate how to search by transaction ID and timestamp.
+```javascript
+query getChain {
+  transactions(
+    tags: [
+      {
+        name: "Root-TX"
+        values: ["WF--VR1ZERvABYy1aNYD3QJ0OAVDSUF8dTlg6zFKveQ"]
+      }
+    ]
+    owners: ["0x591b5ce7ca10a55a9b5d1516ef89693d5b3586b8"]
+    order: ASC
+  ) {
+    edges {
+      node {
+        id
+        timestamp
+      }
+    }
+  }
+}
+```
 
----
+## Use-Cases
 
-### `build_d_guides_irys-react.md`
+Irys’s mutable references open up new opportunities for builders, including:
 
-**Summary:** This is a step-by-step guide for integrating the Irys SDK into a React application created with `create-react-app`. It highlights the need for additional configuration due to Webpack 5 no longer including Node.js polyfills by default. The guide covers installing dependencies (`@irys/web-upload`, `ethers`, etc.), installing `react-app-rewired` and various polyfill packages, creating a `config-overrides.js` file to inject the polyfills into the Webpack config, and modifying the `package.json` scripts to use `react-app-rewired`.
-
----
-
-### `build_d_guides_uploading-nfts.md`
-
-**Summary:** This guide explains the process of creating an NFT by storing its assets and metadata on Irys. The process involves three main steps: 1) Upload the NFT asset (e.g., an image) to Irys to get a permanent URL. 2) Create a JSON metadata file that includes the asset's URL. 3) Upload the metadata file to Irys. The final URL from the metadata upload is then used to mint the NFT on a blockchain. Code examples are provided for both the Irys SDK and the CLI.
-
----
-
-### `build_d_guides_vite.md`
-
-**Summary:** This guide provides instructions for using the Irys SDK with a React project set up using Vite. Similar to the `create-react-app` guide, it addresses the need for Node.js polyfills, which Vite does not include by default. It details installing the Irys SDK and Ethers, installing `vite-plugin-node-polyfills`, and configuring the `vite.config.js` file to use the polyfill plugin and set up aliases for Node.js core modules. An example `App.tsx` component is provided.
-
----
-
-### `build_d_irys-in-the-browser.md`
-
-**Summary:** This document is a comprehensive guide to using the Irys SDK in a browser environment. It explains that the SDK is modular, with dedicated packages for different tokens and wallet providers to reduce bundle size. It provides specific installation commands and code snippets for connecting to Irys from various EVM chains (using Ethers v5, Ethers v6, and Viem v2) and other chains like Solana and Aptos. It lists the different `Web*` classes (e.g., `WebEthereum`, `WebMatic`) to be used for payments with different tokens.
-
----
-
-### `build_d_migrating.md`
-
-**Summary:** This document provides instructions for developers migrating from the older Irys SDK to the new, modular Irys Bundler SDK. It shows side-by-side code comparisons for both NodeJS and browser environments, demonstrating the changes in import statements and initialization code. The old SDK used a single `@irys/sdk` package, while the new one uses separate packages like `@irys/upload` and `@irys/upload-ethereum`.
-
----
-
-### `build_d_networks.md`
-
-**Summary:** This document outlines the different Irys networks available: Mainnet (for real, permanent uploads) and Devnet (for testing with free tokens, data is pruned). It also mentions the L1 testnet. It provides code snippets for connecting to Mainnet and Devnet using the SDK, showing how to use the `.devnet()` method for the latter.
-
----
-
-### `build_d_quickstart.md`
-
-**Summary:** This is a quickstart guide for the Irys SDK in a Node.js environment. It covers installation (`@irys/upload`, `@irys/upload-ethereum`), connecting to the network, funding an Irys account, and uploading data, a single file, and an entire folder. It provides clear, concise code examples for each step.
+- Gaming NFTs: Metadata changes based on in-game actions
+- Dynamic NFTs: Images change based on onchain activity
+- Software distribution: The latest version is always available via the same link
+- Content publishing / social media: Content can be updated at any time and users will always have the most recent version
+- Website hosting / dApp front-ends: Websites can be updated at any time without changing the main URL
 
 ---
+/home/bojack/irys/irys_docs/build_d_features_onchain-folders.md ---
 
-### `build_d_rest-api_account.md`, `build_d_rest-api_general.md`, `build_d_rest-api_transactions.md`
-
-**Summary:** These files list the available Irys REST API endpoints. 
-- **Account API:** Routes for managing accounts, such as checking balances (`/account/balance/{token}`) and withdrawing funds.
-- **General API:** Routes for getting general information about the bundler, such as status and public key (`/info`, `/status`).
-- **Transaction API:** Routes for posting transactions (`/tx`) and querying transaction details, such as status, tags, and data (`/tx/{txId}`).
-
----
-
-### `build_d_sdk_chunked-uploader_expired-uploads.md`
-
-**Summary:** This document provides a code snippet for resuming an expired chunked upload. If a large upload is paused for too long, it expires. The `uploader.getResumeData()` and `uploader.setResumeData()` methods can be used to recover and continue the upload.
-
----
-
-### `build_d_sdk_payment_getBalance.md`
-
-**Summary:** This document explains the `getBalance()` function in the Irys SDK. It returns the wallet's funded balance on the Irys node in atomic units. A code example shows how to retrieve the balance and convert it to standard units using `irys.utils.fromAtomic()`.
-
----
-
-### `build_d_sdk_setup.md`
-
-**Summary:** This is a setup guide for the Irys SDK in a Node.js environment. It emphasizes the modular nature of the new SDK. It provides specific `npm install` commands and connection code snippets for a wide variety of supported tokens, including Aptos, Solana, and numerous EVM-compatible chains (Polygon, Arbitrum, BNB, etc.).
-
----
-
-### `build_d_sdk_upload_upload.md`
-
-**Summary:** This document details the `irys.upload()` method. It explains the parameters (data, tags), the returned receipt object, and the fact that uploads under 100 KiB are free. A code example is provided for uploading a simple string.
-
----
-
-### `build_d_storage-cli_commands_balance.md` & `build_d_storage-cli_commands_upload.md`
-
-**Summary:** These documents describe commands for the Irys CLI.
-- **`balance`**: Shows the funded balance for a given wallet address on a specified network and token.
-- **`upload`**: Uploads a single file. It requires parameters for the network, token, private key, and optional tags.
-Examples are provided for both Mainnet and Devnet.
-
----
-
-### `build_programmability_connecting-to-testnet.md`
-
-**Summary:** This document provides the necessary details for connecting to the Irys L1 alpha testnet. It lists the network RPC endpoints, chain information (ChainID: 1270, Ticker: IRYS), and a code snippet for connecting using Ethers.js via the JSON-RPC URL.
-
----
-
-### `build_programmability_introduction.md`
-
-**Summary:** This document introduces the Irys alpha testnet and its core concepts: the **IrysVM** (a fork of the EVM) and **Programmable Data**. Programmable Data allows smart contracts to natively access, manipulate, and write data within the Irys protocol, enabling powerful, on-chain data composition.
-
----
-
-### `build_programmability_js_addresses.md`
-
-**Summary:** This document explains the two address formats on the Irys L1: the base58-encoded `Irys address` and the hex-encoded `Execution address` (a standard EVM address). It clarifies that both are derived from the same private key and are inter-convertible. It provides a code snippet showing the `@irys/js` utility functions `irysToExecAddr` and `execToIrysAddr` for conversion.
-
----
-
-### `build_programmability_js_quickstart.md`
-
-**Summary:** This is a quickstart guide for the `@irys/js` library, used for interacting with the Irys L1 testnet. It covers installation, creating a client, getting an address, checking a balance, and the multi-step process for creating and posting a data transaction (create, prepare chunks, get fees, sign, upload header, upload chunks).
+```json
+{
+  "title": "Irys | Onchain Folders",
+  "url": "https://docs.irys.xyz/build/d/features/onchain-folders",
+  "content": {
+    "onchainFolders": {
+      "description": "Onchain folders are powerful way to organize transactions on Irys. Use them to reference onchain data by logical names instead of transaction IDs.",
+      "whyUse": {
+        "title": "Why Use Onchain Folders?",
+        "points": [
+          "Logical Grouping: Create organized and readable structures for onchain data.",
+          "Human-Readable Referencing: Replace transaction IDs with logical names, improving accessibility.",
+          "Cross-Ownership Grouping: Include any transactions on Irys, even if they weren’t created by you.",
+          "Flexibility: Add new files to existing folders at any time."
+        ]
+      },
+      "howItWorks": {
+        "title": "How The Irys Gateway Resolves Onchain Folders",
+        "steps": [
+          "Looks up the manifest by ID.",
+          "Looks in the manifest to see if the path exists.",
+          "Returns the transaction associated with the path if found.",
+          "Returns 404 if not found."
+        ],
+        "example": "https://gateway.irys.xyz/8eNpkShMwdbiNBtGuVGBKp8feDZCa21VppX2eDi3eLME/foo1.png"
+      },
+      "creatingFolders": {
+        "title": "Creating Onchain Folders",
+        "methods": [
+          {
+            "method": "Automatically",
+            "description": "When you upload groups of files using the Irys SDK's uploadFolder() function or the CLI's upload-dir command, an onchain folder for you is automatically created for you."
+          },
+          {
+            "method": "Manually",
+            "description": "To manually create an onchain folder, create a JavaScript Map object where each entry maps a unique transaction ID to a unique path."
+          }
+        ]
+      },
+      "mutableFolders": {
+        "title": "Mutable Onchain Folders",
+        "description": "Mutable onchain folders let you add new files to an existing folder after it’s created.",
+        "howToCreate": {
+          "steps": [
+            "Upload the Initial Folder.",
+            "Reference Files Using a Mutable URL.",
+            "Upload New Files.",
+            "Create a Onchain Folder.",
+            "Tag the New Manifest.",
+            "Access the Updated Folder."
+          ]
+        }
+      }
+    }
+  }
+}
+```
 
 ---
+/home/bojack/irys/irys_docs/build_d_features_receipts.md ---
 
-### `build_programmability_programmable-data.md`
-
-**Summary:** This is a technical quickstart for using the "Programmable Data" feature in Solidity smart contracts. It explains that developers can use a precompile to read data from permanently stored Irys transactions directly within a smart contract function. The process involves inheriting a `ProgrammableData` library contract, creating a read-range "access list" using the `@irys/js` SDK, and attaching that access list to an EVM transaction that calls the smart contract.
+```json
+{
+  "receipts": {
+    "description": "Receipts give you cryptographic proof of the exact time, accurate to the millisecond, that a transaction was posted.",
+    "sections": [
+      {
+        "title": "Receipts & Timestamps",
+        "content": "When you upload data to Irys, it is stamped with a millisecond-accurate timestamp before being stored onchain. Blockchains rely on timestamps to sequence the order of transactions and blocks. Transaction sequencing plays a critical role in blockchain security as it ensures that all transactions are recorded in the correct order, and that order is never changed. Receipts provide cryptographic proof of a timestamp."
+      },
+      {
+        "title": "Ordering & Streaming",
+        "content": "Ordering and streaming applications process and deliver data in real-time. They're commonly used for messaging, event processing, and data integration. They transfer high data volumes between independent applications while maintaining high performance and scalability. Popular examples include Apache Kafka and RabbitMQ."
+      },
+      {
+        "title": "Why Use Signed Receipts?",
+        "content": "Cryptographically signed receipts open up new development options for builders. For example: 1. Sequential ordering of posts, likes and comments for a decentralized social protocol. 2. Sequential ordering of data generated by a group messaging protocol. 3. Automatically adjudicating music copyright claims. 4. Preserving history, ensuring it's not manipulated over time. 5. Preserving scientific research using Irys's pay-once, store-forever model."
+      },
+      {
+        "title": "Receipt Permanence",
+        "content": "Upon posting a transaction to Irys, a receipt is immediately returned to the user. Irys maintains an internal registry of all receipts, which can be queried whenever a receipt is needed. These receipts are stored in a centralized fashion, which may be sufficient for users comfortable with the trust assumptions of centralized services. You can also opt to permanently store your receipt on Irys by uploading it using our SDK or CLI."
+      },
+      {
+        "title": "Receipt format",
+        "content": "Receipts are a JSON object with the following format: { id: '1Txlbl5NgEqUbIkDnnunHC0gFx0n8_Y92zAsoX54kI8', timestamp: 1676891681110, version: '1.0.0', public: '...', signature: '...', deadlineHeight: ..., block: ..., validatorSignatures: [], }"
+      },
+      {
+        "title": "Verifying Receipts",
+        "content": "You may need to verify a receipt at some point after it was issued. For example, if your application’s security depends on the order of transactions, you can then verify every receipt to ensure its order has not been tampered with. The receipt contains a signature field, which is generated by creating a deep hash of information from the receipt, including transaction ID and timestamp. The receipt is then signed it by Irys. Using the Irys SDK you can verify the signature using the same values from the receipt along with the supplied public key."
+      },
+      {
+        "title": "Timestamp Generation",
+        "content": "Irys records the precise time of each transaction with a UNIX timestamp in milliseconds. This timestamp is generated by the node that first receives and verifies the transaction."
+      }
+    ],
+    "metadata": {
+      "twitter:image": "https://docs.irys.xyz/opengraph-image.png?8c892bc9b92ee1a8",
+      "twitter:title": "Irys | Receipts",
+      "og:image": "https://docs.irys.xyz/opengraph-image.png?8c892bc9b92ee1a8",
+      "twitter:image:type": "image/png",
+      "ogImage": "https://docs.irys.xyz/opengraph-image.png?8c892bc9b92ee1a8",
+      "ogTitle": "Irys | Receipts",
+      "og:image:type": "image/png",
+      "og:image:height": "600",
+      "twitter:image:height": "600",
+      "viewport": "width=device-width, initial-scale=1",
+      "favicon": "https://docs.irys.xyz/favicon.ico",
+      "language": "en",
+      "og:image:width": "1200",
+      "title": "Irys | Receipts",
+      "twitter:card": "summary_large_image",
+      "twitter:image:width": "1200",
+      "og:title": "Irys | Receipts",
+      "scrapeId": "af77deed-44f8-462a-baee-375620af20c8",
+      "sourceURL": "https://docs.irys.xyz/build/d/features/receipts",
+      "url": "https://docs.irys.xyz/build/d/features/receipts",
+      "statusCode": 200,
+      "contentType": "text/html; charset=utf-8",
+      "proxyUsed": "basic",
+      "cacheState": "miss"
+    }
+  }
+}
+```
 
 ---
+/home/bojack/irys/irys_docs/build_d_features_supported-tokens.md ---
 
-### `build_welcome-builders.md`
+```json
+{
+  "date": "2025-09-03T09:10:30.075Z",
+  "supportedTokens": {
+    "mainnet": [
+      {
+        "tokenBlockchain": "Aptos",
+        "token": "APT",
+        "parameterValue": "aptos",
+        "nodeSupport": "yes",
+        "browserSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Algorand",
+        "token": "ALGO",
+        "parameterValue": "algorand",
+        "nodeSupport": "yes",
+        "browserSupport": "no"
+      },
+      {
+        "tokenBlockchain": "Arbitrum",
+        "token": "ETH",
+        "parameterValue": "arbitrum",
+        "nodeSupport": "yes",
+        "browserSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Avalanche C-Chain",
+        "token": "AVAX",
+        "parameterValue": "avalanche",
+        "nodeSupport": "yes",
+        "browserSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Berachain",
+        "token": "BERA",
+        "parameterValue": "bera",
+        "nodeSupport": "yes",
+        "browserSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Binance Coin",
+        "token": "BNB",
+        "parameterValue": "bnb",
+        "nodeSupport": "yes",
+        "browserSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Boba",
+        "token": "BOBA",
+        "parameterValue": "boba",
+        "nodeSupport": "yes",
+        "browserSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Boba-eth",
+        "token": "ETH",
+        "parameterValue": "boba-eth",
+        "nodeSupport": "yes",
+        "browserSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Chainlink",
+        "token": "LINK",
+        "parameterValue": "chainlink",
+        "nodeSupport": "yes",
+        "browserSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Eclipse-eth",
+        "token": "ETH",
+        "parameterValue": "eclipse-eth",
+        "nodeSupport": "yes",
+        "browserSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Ethereum",
+        "token": "ETH",
+        "parameterValue": "ethereum",
+        "nodeSupport": "yes",
+        "browserSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Base Ethereum",
+        "token": "ETH",
+        "parameterValue": "base-eth",
+        "nodeSupport": "yes",
+        "browserSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Linea Ethereum",
+        "token": "ETH",
+        "parameterValue": "linea-eth",
+        "nodeSupport": "yes",
+        "browserSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Scroll Ethereum",
+        "token": "ETH",
+        "parameterValue": "scroll-eth",
+        "nodeSupport": "yes",
+        "browserSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Fantom",
+        "token": "FTM",
+        "parameterValue": "fantom",
+        "nodeSupport": "yes",
+        "browserSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "IoTeX",
+        "token": "IoTeX",
+        "parameterValue": "iotex",
+        "nodeSupport": "yes",
+        "browserSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Near",
+        "token": "NEAR",
+        "parameterValue": "near",
+        "nodeSupport": "yes",
+        "browserSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Polygon",
+        "token": "MATIC",
+        "parameterValue": "matic",
+        "nodeSupport": "yes",
+        "browserSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Solana",
+        "token": "SOL",
+        "parameterValue": "solana",
+        "nodeSupport": "yes",
+        "browserSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "USDC (on Ethereum)",
+        "token": "USDC",
+        "parameterValue": "usdc-eth",
+        "nodeSupport": "yes",
+        "browserSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "USDC (on Polygon)",
+        "token": "USDC",
+        "parameterValue": "usdc-polygon",
+        "nodeSupport": "yes",
+        "browserSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "USDC (on Solana)",
+        "token": "USDC",
+        "parameterValue": "usdc-solana",
+        "nodeSupport": "yes",
+        "browserSupport": "yes"
+      }
+    ],
+    "devnet": [
+      {
+        "tokenBlockchain": "Aptos",
+        "token": "APT",
+        "parameterValue": "aptos",
+        "irysSupport": "yes",
+        "webIrysSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Algorand",
+        "token": "ALGO",
+        "parameterValue": "algorand",
+        "irysSupport": "yes",
+        "webIrysSupport": "no"
+      },
+      {
+        "tokenBlockchain": "Arbitrum",
+        "token": "ETH",
+        "parameterValue": "arbitrum",
+        "irysSupport": "yes",
+        "webIrysSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Avalanche C-Chain",
+        "token": "AVAX",
+        "parameterValue": "avalanche",
+        "irysSupport": "yes",
+        "webIrysSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Berachain (Bepolia)",
+        "token": "BERA",
+        "parameterValue": "bera",
+        "irysSupport": "yes",
+        "webIrysSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Binance Coin",
+        "token": "BNB",
+        "parameterValue": "bnb",
+        "irysSupport": "yes",
+        "webIrysSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Chainlink",
+        "token": "LINK",
+        "parameterValue": "chainlink",
+        "irysSupport": "yes",
+        "webIrysSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Ethereum (Sepolia)",
+        "token": "ETH",
+        "parameterValue": "ethereum",
+        "irysSupport": "yes",
+        "webIrysSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Base Ethereum (Sepolia)",
+        "token": "ETH",
+        "parameterValue": "base-eth",
+        "irysSupport": "yes",
+        "webIrysSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Linea Ethereum (Sepolia)",
+        "token": "ETH",
+        "parameterValue": "linea-eth",
+        "irysSupport": "yes",
+        "webIrysSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Scroll Ethereum (Sepolia)",
+        "token": "ETH",
+        "parameterValue": "scroll-eth",
+        "irysSupport": "yes",
+        "webIrysSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "IoTeX",
+        "token": "IoTeX",
+        "parameterValue": "iotex",
+        "irysSupport": "yes",
+        "webIrysSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Near",
+        "token": "NEAR",
+        "parameterValue": "near",
+        "irysSupport": "yes",
+        "webIrysSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Polygon (Amoy)",
+        "token": "AMOY",
+        "parameterValue": "matic",
+        "irysSupport": "yes",
+        "webIrysSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Solana",
+        "token": "SOL",
+        "parameterValue": "solana",
+        "irysSupport": "yes",
+        "webIrysSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "USDC (on Ethereum)",
+        "token": "USDC",
+        "parameterValue": "usdc-eth",
+        "irysSupport": "yes",
+        "webIrysSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "USDC (on Polygon)",
+        "token": "USDC",
+        "parameterValue": "usdc-polygon",
+        "irysSupport": "yes",
+        "webIrysSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "USDC (on Solana)",
+        "token": "USDC",
+        "parameterValue": "usdc-solana",
+        "irysSupport": "yes",
+        "webIrysSupport": "yes"
+      },
+      {
+        "tokenBlockchain": "Eclipse-eth (eclipse faucet)",
+        "token": "ETH",
+        "parameterValue": "eclipse-eth",
+        "irysSupport": "yes",
+        "webIrysSupport": "yes"
+      }
+    ]
+  }
+}
+```
 
-**Summary:** This is a welcome message from the Irys founder. It introduces Irys as the "world's first programmable datachain," an L1 blockchain that incentivizes storage and allows data to be composable and interactive with smart contracts. It announces the alpha testnet launch and the planned rollout of the IrysVM and programmable data features.
+---
+/home/bojack/irys/irys_docs/build_d_features_tags.md ---
+
+```json
+{
+  "date": "2025-09-03T08:29:29.521Z",
+  "title": "Irys | Metadata Tagging",
+  "description": "Irys supports attaching metadata tags to each transaction. Tags can be used to categorize transactions, create mutable data, and inform web browsers how to render files.",
+  "features": {
+    "metadataTagging": {
+      "description": "Irys supports attaching metadata tags to each transaction.",
+      "uses": [
+        "Categorize transactions, making it easier to search for and retrieve relevant information.",
+        "Create mutable data.",
+        "Inform web browsers how to render files (e.g. Content-Type = image/png)."
+      ],
+      "querying": "Tags are indexed by gateways and are queryable using GraphQL.",
+      "contentType": "Irys automatically infers and sets the appropriate Content-Type tag based on the file extension when uploading files and folders.",
+      "additionalUses": "You can add up to 20 tags to each transaction, enabling the construction of semi-relational models within your data."
+    }
+  },
+  "metadata": {
+    "language": "en",
+    "ogImage": "https://docs.irys.xyz/opengraph-image.png?8c892bc9b92ee1a8",
+    "twitterImage": "https://docs.irys.xyz/opengraph-image.png?8c892bc9b92ee1a8",
+    "favicon": "https://docs.irys.xyz/favicon.ico",
+    "sourceURL": "https://docs.irys.xyz/build/d/features/tags",
+    "url": "https://docs.irys.xyz/build/d/features/tags"
+  }
+}
+```
+
+---
+/home/bojack/irys/irys_docs/build_d_graphql.md ---
+
+```json
+{
+  "title": "Irys | Querying With GraphQL",
+  "url": "https://docs.irys.xyz/build/d/graphql",
+  "description": "You can query Irys transaction metadata using GraphQL.",
+  "endpoint": "https://uploader.irys.xyz/graphql",
+  "queryArguments": [
+    {
+      "field": "ids",
+      "description": "An array of transaction IDs passed as strings. Values are ORed together, matching results will include transactions that have any of the supplied IDs."
+    },
+    {
+      "field": "owner",
+      "description": "The address used when posting the transaction. Can be a native address from any of the chains supported by Irys."
+    },
+    {
+      "field": "token",
+      "description": "The token used to pay for the transaction."
+    },
+    {
+      "field": "tags",
+      "description": "An array of tag name / value pairs passed as JSON objects."
+    }
+  ],
+  "resultsFields": [
+    {
+      "field": "id",
+      "description": "The transaction ID."
+    },
+    {
+      "field": "address",
+      "description": "The address used when posting the transaction."
+    },
+    {
+      "field": "token",
+      "description": "The token used to pay for the transaction."
+    },
+    {
+      "field": "receipt",
+      "description": "An optional receipt, only exists if a user requested one at upload."
+    },
+    {
+      "field": "tags",
+      "description": "An array of tags supplied as name / value pairs."
+    },
+    {
+      "field": "timestamp",
+      "description": "The timestamp, accurate to the millisecond of when the transaction was posted."
+    }
+  ],
+  "sampleQueries": [
+    {
+      "query": "query getByIds { transactions(ids: [\"--52WQHJIJod_rni8pkl1Vxt9MFGoXZAm8SC7ex6C1o\", \"--52THRWpX_RJzGcNXmtQ2DSP37d1e1VQ4YmvbY5ZXo\"]) { edges { node { id tags { name value } } } } }",
+      "description": "Search by transaction IDs."
+    },
+    {
+      "query": "query getByTimestamp { transactions(timestamp: { from: 1688144401000, to: 1688317201000 }) { edges { node { id } } } }",
+      "description": "Search by timestamps."
+    }
+  ],
+  "metadata": {
+    "favicon": "https://docs.irys.xyz/favicon.ico",
+    "ogImage": "https://docs.irys.xyz/opengraph-image.png?8c892bc9b92ee1a8",
+    "language": "en"
+  }
+}
+```
+
+---
+/home/bojack/irys/irys_docs/build_d_guides_irys-react.md ---
+
+# Using Irys With npx create-react-app
+
+ℹ️
+
+If you're using React with Vite, polyfills are handled differently. You'll need to follow [this guide instead](https://docs.irys.xyz/build/d/guides/vite).
+
+Irys is fully compatible with React, however, if you’re using `npx create-react-app` to create your project, you will need to do some additional configuration and installation. This guide details how to create a new React project and add Irys support. If you already have a React project, skip the first step.
+
+## Step 1: Create a New React Project
+
+Create a new directory for your project, cd into it, and create your React project:
+
+```bash
+mkdir irys-react
+cd irys-react
+npx create-react-app .
+```
+
+## Step 2: Install the Irys SDK, Ethers, and Axios
+
+```bash
+npm install \
+    @irys/web-upload \
+    @irys/web-upload-ethereum \
+    @irys/web-upload-ethereum-ethers-v6 \
+    ethers@6 \
+    axios
+```
+
+## Step 3: Initialize the Irys Uploader
+
+In your `App.js` file, write an initialization function that sets up an Irys uploader. The following code shows how to use ethers6. We also have code examples for [different providers](https://docs.irys.xyz/build/d/irys-in-the-browser).
+
+```typescript
+import React, { useState } from "react";
+import { ethers } from "ethers";
+import { WebUploader } from "@irys/web-upload";
+import { WebEthereum } from "@irys/web-upload-ethereum";
+import { EthersV6Adapter } from "@irys/web-upload-ethereum-ethers-v6";
+
+function App() {
+  const [walletStatus, setWalletStatus] = useState("Not connected");
+  const [irysStatus, setIrysStatus] = useState("Not connected");
+
+  const connectWallet = async () => {
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      const signer = await provider.getSigner();
+      const address = await signer.getAddress();
+      setWalletStatus(`Connected: ${address}`);
+    } catch (error) {
+      console.error("Error connecting to wallet:", error);
+      setWalletStatus("Error connecting to wallet");
+    }
+  };
+
+  const connectIrys = async () => {
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const irysUploader = await WebUploader(WebEthereum).withAdapter(EthersV6Adapter(provider));
+      setIrysStatus(`Connected to Irys: ${irysUploader.address}`);
+    } catch (error) {
+      console.error("Error connecting to Irys:", error);
+      setIrysStatus("Error connecting to Irys");
+    }
+  };
+
+  return (
+    <div>
+      <button onClick={connectWallet}>Connect Wallet</button>
+      <p>{walletStatus}</p>
+      <button onClick={connectIrys}>Connect Irys</button>
+      <p>{irysStatus}</p>
+    </div>
+  );
+}
+
+export default App;
+```
+
+When you try to run the app, you see this similar to this `BREAKING CHANGE: webpack < 5 used to include polyfills for node.js core modules by default`.
+
+To fix this, you'll need to include Node.js polyfills that are not included by default.
+
+## Step 4: Install React-App-Rewired and Polyfills
+
+Install react-app-rewired, a package that allows you to customize the Webpack configuration to handle the polyfills, and the missing dependencies:
+
+```bash
+npm install react-app-rewired
+npm install --save-dev crypto-browserify stream-browserify assert stream-http https-browserify os-browserify url buffer process
+npm install browserify-zlib path-browserify path
+npm install node-polyfill-webpack-plugin --save-dev
+```
+
+## Step 5: Create the Webpack Configuration Override
+
+At the root level of your project, create a new file called `config-overrides.js` and paste the following:
+
+```typescript
+const NodePolyfillPlugin = require("node-polyfill-webpack-plugin");
+const webpack = require("webpack");
+
+module.exports = function override(config) {
+  config.plugins = (config.plugins || []).concat([
+    new NodePolyfillPlugin(),
+    new webpack.ProvidePlugin({
+      process: "process/browser.js",
+    }),
+  ]);
+
+  const fallback = config.resolve.fallback || {};
+  Object.assign(fallback, {
+    crypto: require.resolve("crypto-browserify"),
+    stream: require.resolve("stream-browserify"),
+    assert: require.resolve("assert"),
+    http: require.resolve("stream-http"),
+    https: require.resolve("https-browserify"),
+    os: require.resolve("os-browserify"),
+    url: require.resolve("url"),
+    zlib: require.resolve("browserify-zlib"),
+    buffer: require.resolve("buffer"),
+    path: require.resolve("path-browserify"),
+  });
+
+  config.resolve.fallback = fallback;
+  config.resolve.extensions = [".js", ".jsx", ".json", ".mjs", ".wasm", ".css"];
+
+  return config;
+};
+```
+
+## Step 6: Update package.json Scripts
+
+Modify your `package.json` to use the new Webpack configuration. Look for this code block:
+
+```json
+ "scripts": {
+   "start": "react-scripts start",
+   "build": "react-scripts build",
+   "test": "react-scripts test",
+   "eject": "react-scripts eject"
+ },
+```
+
+and replace it with this block:
+
+```json
+"scripts": {
+   "start": "react-app-rewired start",
+   "build": "react-app-rewired build",
+   "test": "react-app-rewired test",
+   "eject": "react-scripts eject"
+},
+```
+
+## Step 7: Restart Your React App
+
+Quit the React development server if it's running and restart it:
+
+```bash
+npm start
+```
+
+You should now be good to go! Your React app is set up with all necessary polyfills and is ready to use the Irys SDK.
+
+
+---
+/home/bojack/irys/irys_docs/build_d_guides_uploading-nfts.md ---
+
+# Uploading NFTs to Irys
+
+When you use Irys to store NFT assets, you’re guaranteed your NFT will be both permanent and immutable. Here’s how you do it.
+
+## NFT Assets
+
+![](https://docs.irys.xyz/build/guides/nfts/nft-metadata.png)
+
+There are three parts to an NFT:
+
+1. Smart contract
+2. NFT metadata
+3. NFT assets
+
+The smart contract stores a pointer to the NFT metadata, and then the NFT metadata contains links to the NFT assets.
+
+In the example above, there is a `name` and `description` that are shown on platforms like Opensea when the NFT is viewed. The `image` parameter points to a static image of the NFT. You can also add an optional `animation_url` that points to a video, song, or HTML animation file.
+
+## Creating an NFT
+
+Three steps to creating an NFT:
+
+1. Upload your assets to Irys.
+2. Embed the URLs to the assets in NFT metadata.
+3. Upload metadata to Irys.
+4. Use the metadata URL to mint your NFT.
+
+## Uploading Assets (SDK)
+
+After [installing the Irys SDK](https://docs.irys.xyz/build/d/sdk/setup), upload your assets with:
+
+ℹ️
+
+Use a token-specific version of `getIrysUploader()` to connect to an Irys Bundler before uploading. Choose [one from here](https://docs.irys.xyz/build/d/sdk/setup).
+
+```js
+import * as fs from "fs";
+
+const uploadImage = async () => {
+	const irys = await getIrysUploader();
+	const fileToUpload = "./myNFT.png";
+
+	// Get size of file
+	const { size } = await fs.promises.stat(fileToUpload);
+	// Get cost to upload "size" bytes
+	const price = await irys.getPrice(size);
+	console.log(`Uploading ${size} bytes costs ${irys.utils.fromAtomic(price)} ${token}`);
+	await irys.fund(price);
+
+	// Upload metadata
+	try {
+		const response = await irys.uploadFile(fileToUpload);
+		console.log(`File uploaded ==> https://gateway.irys.xyz/${response.id}`);
+	} catch (e) {
+		console.log("Error uploading file ", e);
+	}
+};
+```
+
+## Uploading Assets (CLI)
+
+Alternatively, you can [upload](https://docs.irys.xyz/build/d/storage-cli/commands/upload) using our [Storage CLI](https://docs.irys.xyz/build/d/storage-cli/installation).
+
+```console
+irys upload myNFT.png \
+  -n devnet \
+  -t ethereum \
+  -w bf20......c9885307 \
+  --tags Content-Type image/png \
+  --provider-url https://rpc.sepolia.dev
+```
+
+## Creating Metadata
+
+Embed the URLs generated from the above into your NFT metadata.
+
+```json
+{
+	"name": "My NFT",
+	"symbol": "MNFT",
+	"description": "To the moooooonnnn",
+	"image": "https://gateway.irys.xyz/737m0bA1kW4BlIJOg_kOGUpHAAI-3Ec9bdo8S_xTFKI"
+}
+```
+
+## Uploading Metadata (SDK)
+
+Finally, upload your NFT metadata to Irys and use the URL generated to mint the NFT.
+
+```js
+import { Uploader } from "@irys/upload";
+import * as fs from "fs";
+
+const uploadMetadata = async () => {
+	const irys = await getIrysUploader();
+
+	const fileToUpload = "./metadata.json";
+	const tags = [{ name: "Content-Type", value: "application/json" }];
+
+	// Get size of file
+	const { size } = await fs.promises.stat(fileToUpload);
+	// Get cost to upload "size" bytes
+	const price = await irys.getPrice(size);
+	console.log(`Uploading ${size} bytes costs ${irys.utils.fromAtomic(price)} ${token}`);
+	await irys.fund(price);
+
+	// Upload metadata
+	try {
+		const response = await irys.uploadFile(fileToUpload, { tags: tags });
+		console.log(`File uploaded ==> https://gateway.irys.xyz/${response.id}`);
+	} catch (e) {
+		console.log("Error uploading file ", e);
+	}
+};
+```
+
+## Uploading Metadata (CLI)
+
+Alternatively, you can [upload](https://docs.irys.xyz/build/d/storage-cli/commands/upload) using our [Storage CLI](https://docs.irys.xyz/build/d/storage-cli/installation).
+
+```console
+irys upload metadata.json \
+  -n devnet \
+  -t ethereum \
+  -w bf20......c9885307 \
+  --tags Content-Type application/json \
+  --provider-url https://rpc.sepolia.dev
+```
+
+
+---
+/home/bojack/irys/irys_docs/build_d_guides_vite.md ---
+
+[WARNING: This file was truncated. To view the full content, use the 'read_file' tool on this specific file.]
+
+{
+  "title": "Using Irys With React + Vite",
+  "steps": [
+    {
+      "step": 1,
+      "title": "Setup a New Project",
+      "description": "Create a new directory for your project, navigate into it, and initialize it with Vite:",
+      "code": "mkdir irys-vite\ncd irys-vite\nnpm create vite@latest .\n",
+      "note": "Choose React and select either TypeScript or JavaScript. After selecting the framework, run: 
+npm install
+"
+    },
+    {
+      "step": 2,
+      "title": "Install the Irys SDK, Ethers, and Axios",
+      "description": "Install the necessary packages, including the Irys SDK, Ethers, and Axios:",
+      "code": "npm install 
+    @irys/web-upload 
+    @irys/web-upload-ethereum 
+    @irys/web-upload-ethereum-ethers-v6 
+    ethers@6 
+    axios
+"
+    },
+    {
+      "step": 3,
+      "title": "Initialize the Irys Uploader",
+      "description": "In your App.tsx file, write an initialization function to set up an Irys uploader using Ethers v6:",
+      "code": "import { useState } from 'react';
+import { ethers } from 'ethers';
+import { WebUploader } from '@irys/web-upload';
+import { WebEthereum } from '@irys/web-upload-ethereum';
+import { EthersV6Adapter } from '@irys/web-upload-ethereum-ethers-v6';
+
+function App() {
+  const [walletStatus, setWalletStatus] = useState('Not connected');
+  const [irysStatus, setIrysStatus] = useState('Not connected');
+
+  const connectWallet = async () => {
+    console.log('connect wallet');
+
+    if (typeof window.ethereum === 'undefined') {
+      console.error('No Ethereum provider found. Please install MetaMask or another wallet.');
+      setWalletStatus('No Ethereum provider found. Please install MetaMask or another wallet.');
+      return;
+    }
+
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      await provider.send('eth_requestAccounts', []);
+      const signer = await provider.getSigner();
+      const address = await signer.getAddress();
+      setWalletStatus(`Connected: ${address}`);
+    } catch (error) {
+      console.error('Error connecting to wallet:', error);
+      setWalletStatus('Error connecting to wallet');
+    }
+  };
+
+  const connectIrys = async () => {
+    if (typeof window.ethereum === 'undefined') {
+      console.error('No Ethereum provider found. Please install MetaMask or another wallet.');
+      setIrysStatus('No Ethereum provider found. Please install MetaMask or another wallet.');
+      return;
+    }
+
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const irysUploader = await WebUploader(WebEthereum).withAdapter(EthersV6Adapter(provider));
+      setIrysStatus(`Connected to Irys: ${irysUploader.address}`);
+    } catch (error) {
+      console.error('Error connecting to Irys:', error);
+      setIrysStatus('Error connecting to Irys');
+    }
+  };
+
+  return (
+    <div>
+      <button onClick={connectWallet}>Connect Wallet</button>
+      <p>{wall... [truncated] 
+    }
+  ]
+}
+
+---
+/home/bojack/irys/irys_docs/build_d_irys-in-the-browser.md ---
+
+Search... `⌘K`
+
+[Explorer](https://explorer.irys.xyz/) [Github](https://github.com/Irys-xyz)
+
+### Learn
+
+### What
+
+### Why
+
+### Network Overview
+
+### Protocol Overview
+
+### Build
+
+### ONCHAIN STORAGE
+
+[Quickstart](https://docs.irys.xyz/build/d/quickstart) [Mainnet / Devnet](https://docs.irys.xyz/build/d/networks)
+
+### Features
+
+### SDK
+
+[Irys in the Browser](https://docs.irys.xyz/build/d/irys-in-the-browser)
+
+### Storage CLI
+
+### REST API
+
+### Guides
+
+[Downloading](https://docs.irys.xyz/build/d/downloading) [Querying](https://docs.irys.xyz/build/d/graphql) [Troubleshooting](https://docs.irys.xyz/build/d/troubleshooting) [Migrating](https://docs.irys.xyz/build/d/migrating)
+
+### PROGRAMMABILITY
+
+# [Irys in The Browser](https://docs.irys.xyz/build/d/irys-in-the-browser#irys-in-the-browser)
+
+The Irys SDK reduces dependency bloat by providing dedicated packages for each token. Your install statements, import and connection code will differ based on the token used for payment and the provider used.
+
+Choose the code for your provider:
+
+🚀
+
+If you're using Irys with React, follow
+[these extra setup steps](https://docs.irys.xyz/build/d/guides/irys-react). If you're using Irys with Vite, [follow these steps](https://docs.irys.xyz/build/d/guides/vite).
+
+[Ethers v5](https://docs.irys.xyz/build/d/irys-in-the-browser#ethers-v5) \| [Ethers v6](https://docs.irys.xyz/build/d/irys-in-the-browser#ethers-v6) \| [Viem v2](https://docs.irys.xyz/build/d/irys-in-the-browser#viem-v2) \| [Solana](https://docs.irys.xyz/build/d/irys-in-the-browser#solana) \| [Aptos](https://docs.irys.xyz/build/d/irys-in-the-browser#aptos)
+
+## [EVM Chains](https://docs.irys.xyz/build/d/irys-in-the-browser#evm-chains)
+
+When connecting from an EVM chain, your connection code will differ based on the token you're using. The examples below use Ethereum and the `WebEthereum` class. To change tokens, use one from the following list.
+
+| Token | Class Name |
+| --- | --- |
+| Polygon | `WebMatic` |
+| Binance Coin | `WebBNB` |
+| Avalanche C-Chain | `WebAvalanche` |
+| Base Ethereum | `WebBaseEth` |
+| USDC (on Ethereum) | `WebUSDCEth` |
+| Arbitrum | `WebArbitrum` |
+| Chainlink | `WebChainlink` |
+| USDC (on Polygon) | `WebUSDCPolygon` |
+| Berachain | `WebBera` |
+| Scroll Ethereum | `WebScrollEth` |
+| Linea Ethereum | `WebLineaEth` |
+| IoTeX | `WebIotex` |
+| Ethereum | `WebEthereum` |
+
+### [Ethers v5](https://docs.irys.xyz/build/d/irys-in-the-browser#ethers-v5)
+
+Installing:
+
+```bg-grey2/80 p-1 rounded-md text-grey5 before:!content-none after:!content-none normal-case hljs console
+npm install \
+    @irys/web-upload \
+    @irys/web-upload-ethereum \
+    ethers@5
+
+```
+
+Importing & Configuring:
+
+```bg-grey2/80 p-1 rounded-md text-grey5 before:!content-none after:!content-none normal-case hljs js
+import { WebUploader } from "@irys/web-upload";
+import { WebEthereum } from "@irys/web-upload-ethereum";
+
+const getIrysUploader = async () => {
+  const provider = new ethers.providers.Web3Provider(window.ethereum);
+  const irysUploader = await WebUploader(WebEthereum).withProvider(provider);
+
+  return irysUploader;
+};
+
+```
+
+### [Ethers v6](https://docs.irys.xyz/build/d/irys-in-the-browser#ethers-v6)
+
+Installing:
+
+```bg-grey2/80 p-1 rounded-md text-grey5 before:!content-none after:!content-none normal-case hljs console
+npm install \
+    @irys/web-upload \
+    @irys/web-upload-ethereum \
+    @irys/web-upload-ethereum-ethers-v6 \
+    ethers@6
+
+```
+
+Importing & Configuring:
+
+```bg-grey2/80 p-1 rounded-md text-grey5 before:!content-none after:!content-none normal-case hljs js
+import { WebUploader } from "@irys/web-upload";
+import { WebEthereum } from "@irys/web-upload-ethereum";
+import { EthersV6Adapter } from "@irys/web-upload-ethereum-ethers-v6";
+import { ethers } from "ethers";
+
+const getIrysUploader = async () => {
+  const provider = new ethers.BrowserProvider(window.ethereum);
+  const irysUploader = await WebUploader(WebEthereum).withAdapter(EthersV6Adapter(provider));
+
+  return irysUploader;
+};
+
+```
+
+### [Viem v2](https://docs.irys.xyz/build/d/irys-in-the-browser#viem-v2)
+
+Installing:
+
+```bg-grey2/80 p-1 rounded-md text-grey5 before:!content-none after:!content-none normal-case hljs console
+npm install \
+    @irys/web-upload \
+    @irys/web-upload-ethereum \
+    @irys/web-upload-ethereum-viem-v2 \
+    viem
+
+```
+
+Importing & Configuring:
+
+```bg-grey2/80 p-1 rounded-md text-grey5 before:!content-none after:!content-none normal-case hljs js
+import { WebUploader } from "@irys/web-upload";
+import { WebEthereum } from "@irys/web-upload-ethereum";
+import { ViemV2Adapter } from "@irys/web-upload-ethereum-viem-v2";
+
+const getIrysUploader = async () => {
+  const [account] = await window.ethereum.request({ method: "eth_requestAccounts",});
+
+  const provider = createWalletClient({
+    account,
+    chain: sepolia,
+    transport: custom(window.ethereum),
+  });
+
+  const publicClient = createPublicClient({
+    chain: sepolia,
+    transport: custom(window.ethereum),
+  });
+
+  const irysUploader = await WebUploader(WebEthereum).withAdapter(ViemV2Adapter(provider, { publicClient }));
+
+  return irysUploader;
+};
+
+```
+
+## [Solana](https://docs.irys.xyz/build/d/irys-in-the-browser#solana)
+
+Installing:
+
+```bg-grey2/80 p-1 rounded-md text-grey5 before:!content-none after:!content-none normal-case hljs console
+npm install \
+    @irys/web-upload \
+    @irys/web-upload-solana
+    @solana/wallet-adapter-base \
+    @solana/wallet-adapter-react \
+    @solana/wallet-adapter-react-ui \
+    @solana/wallet-adapter-wallets \
+    @solana/web3.js
+
+```
+
+Importing & Configuring:
+
+
+The Solana library uses the React provider pattern. Start by setting up a top-level file named `ClientProviders.tsx` that wraps all your child components.
+
+```bg-grey2/80 p-1 rounded-md text-grey5 before:!content-none after:!content-none normal-case hljs ts
+"use client";
+
+import { ReactNode, useMemo } from "react";
+import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
+import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
+import { UnsafeBurnerWalletAdapter } from "@solana/wallet-adapter-wallets";
+import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
+import { clusterApiUrl } from "@solana/web3.js";
+
+require("@solana/wallet-adapter-react-ui/styles.css");
+
+export default function ClientProviders({ children }: { children: ReactNode }) {
+ const network = WalletAdapterNetwork.Devnet;
+
+ const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+ const wallets = useMemo(
+   () => [new UnsafeBurnerWalletAdapter()],
+   [network]
+ );
+
+ return (
+   <ConnectionProvider endpoint={endpoint}>
+     <WalletProvider wallets={wallets} autoConnect>
+       <WalletModalProvider>
+         {children}
+       </WalletModalProvider>
+     </WalletProvider>
+   </ConnectionProvider>
+ );
+}
+
+```
+
+Then load this component via `layout.tsx`:
+
+```bg-grey2/80 p-1 rounded-md text-grey5 before:!content-none after:!content-none normal-case hljs ts
+import type { Metadata } from "next";
+import ClientProviders from "@/app/components/ClientProviders";
+import { Inter } from "next/font/google";
+const inter = Inter({ subsets: ["latin"] });
+
+export default function RootLayout({
+ children,
+}: Readonly<{
+ children: React.ReactNode;
+}>) {
+ return (
+   <html lang="en">
+     <body className={inter.className}>
+       <ClientProviders>
+         {children}
+       </ClientProviders>
+     </body>
+   </html>
+ );
+}
+
+```
+
+[Solana's wallet-adapter library](https://solana.com/developers/cookbook/wallets/connect-wallet-react) make it easy to manage wallet connections. Create a component using this library to connect to a Solana wallet:
+
+```bg-grey2/80 p-1 rounded-md text-grey5 before:!content-none after:!content-none normal-case hljs ts
+
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { WalletMultiButton, WalletDisconnectButton } from "@solana/wallet-adapter-react-ui";
+
+import "@solana/wallet-adapter-react-ui/styles.css";
+
+const ConnectSolana: React.FC = () => {
+  const [isClient, setIsClient] = useState(false);
+
+  // Prevent hydration errors by ensuring this runs only on the client side
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return null;
+  }
+
+  return (
+    <div className="border-2 border-primary rounded-2xl p-4 w-full max-w-md">
+      {/* Solana wallet connect button */}
+      <div className="mr-5">
+        <WalletMultiButton />
+      </div>
+      {/* Solana wallet disconnect button */}
+      <div className="ml-5">
+        <WalletDisconnectButton />
+      </div>
+    </div>
+  );
+};
+
+export default ConnectSolana;
+
+```
+
+Then create a component called `ConnectIrys.tsx` that connects to an Irys bundler.
+
+```bg-grey2/80 p-1 rounded-md text-grey5 before:!content-none after:!content-none normal-case hljs ts
+
+"use client";
+
+import { useState } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { WebUploader } from "@irys/web-upload";
+import { WebSolana } from "@irys/web-upload-solana";
+
+const getIrysUploader = async (wallet: any) => {
+ try {
+   const irysUploader = await WebUploader(WebSolana).withProvider(wallet);
+
+   return irysUploader;
+ } catch (error) {
+   console.error("Error connecting to Irys:", error);
+   throw new Error("Error connecting to Irys");
+ }
+};
+
+const ConnectIrys = (): JSX.Element => {
+ const wallet = useWallet();
+ const [isConnected, setIsConnected] = useState<boolean>(false);
+
+ const connectToIrys = async () => {
+   if (!wallet) {
+     console.log("Wallet not connected");
+     return;
+   }
+
+   try {
+     const irysUploader = await getIrysUploader(wallet);
+     console.log(`Connected to Irys from ${irysUploader.address}`);
+     setIsConnected(true);
+   } catch (error) {
+     console.log("Error connecting to Irys");
+   }
+ };
+
+ return (
+   <div>
+     <button onClick={connectToIrys}>
+       {isConnected ? "Connected to Irys" : "Connect Irys"}
+     </button>
+   </div>
+ );
+};
+
+export default ConnectIrys;
+
+```
+
+And load them all through your `page.tsx` file:
+
+```bg-grey2/80 p-1 rounded-md text-grey5 before:!content-none after:!content-none normal-case hljs ts
+import Image from "next/image";
+import ConnectSolana from "./components/ConnectSolana";
+import ConnectIrys from "./components/ConnectIrys";
+
+export default function Home() {
+  return (
+    <main className="flex min-h-screen flex-col justify-around items-center p-24 bg-black">
+      <ConnectSolana />
+      <ConnectIrys />
+    </main>
+  );
+}
+
+```
+
+## [Aptos](https://docs.irys.xyz/build/d/irys-in-the-browser#aptos)
+
+Start by scaffolding a blank Aptos project using [`npx create-aptos-dapp`](https://aptos.dev/en/build/create-aptos-dapp).
+
+Next, install the following packages needed by Irys:
+
+```bg-grey2/80 p-1 rounded-md text-grey5 before:!content-none after:!content-none normal-case hljs console
+npm install \
+    @irys/web-upload \
+    @irys/web-upload-aptos \
+    axios
+
+```
+
+Replace your `App.tsx` file with the following:
+
+```bg-grey2/80 p-1 rounded-md text-grey5 before:!content-none after:!content-none normal-case hljs tsx
+import React, { useState } from "react";
+import { useWallet } from "@aptos-labs/wallet-adapter-react";
+import { WebUploader } from "@irys/web-upload";
+import { WebAptos } from "@irys/web-upload-aptos";
+
+// Radix UI Components
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Header } from "@/components/Header";
+
+function App() {
+  const { connected } = useWallet();
+  const wallet = useWallet();
+  const [irysStatus, setIrysStatus] = useState("Not connected");
+
+  const connectIrys = async () => {
+    console.log("connect irys called");
+    console.log({wallet})
+    try {
+      const irysUploader = await WebUploader(WebAptos).withProvider(wallet);
+      console.log({irysUploader})
+
+      setIrysStatus(`Connected to Irys: ${irysUploader.address}`);
+    } catch (error) {
+      console.error("Error connecting to Irys:", error);
+      setIrysStatus("Error connecting to Irys");
+    }
+  };
+
+  return (
+    <>
+      <Header />
+      <div className="flex items-center justify-center flex-col">
+        <Card className="mt-6">
+          <CardHeader>
+            {connected ? (
+              <CardTitle>
+                <button onClick={connectIrys}>
+                  {irysStatus === "Not connected" ? "Connect Irys" : irysStatus}
+                </button>
+              </CardTitle>
+            ) : (
+              <CardTitle>To get started, connect a wallet</CardTitle>
+            )}
+          </CardHeader>
+        </Card>
+      </div>
+    </>
+  );
+}
+
+export default App;
+
+```
+
+The `npx create-aptos-dapp` CLI uses React + Vite. Vite does not automatically polyfill Node.js core modules like crypto, stream, os, or path. To fix compatibility issues, install the necessary polyfill packages:
+
+```bg-grey2/80 p-1 rounded-md text-grey5 before:!content-none after:!content-none normal-case hljs bash
+npm install --save-dev \
+    crypto-browserify \
+    stream-browserify \
+    os-browserify \
+    path-browserify \
+    vite-plugin-node-polyfills
+
+```
+
+Modify your `vite.config.js` to use `vite-plugin-node-polyfills` to handle the polyfills required for Node.js core modules:
+
+```bg-grey2/80 p-1 rounded-md text-grey5 before:!content-none after:!content-none normal-case hljs ts
+import path from "path";
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { nodePolyfills } from "vite-plugin-node-polyfills";
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [
+    react(),
+    nodePolyfills({
+      // Enable polyfills for specific globals and modules
+      globals: {
+        Buffer: true,
+        global: true,
+        process: true,
+      },
+      protocolImports: true, // Polyfill node: protocol imports
+    }),
+  ],
+  resolve: {
+    alias: {
+      // Polyfill Node.js core modules
+      crypto: "crypto-browserify",
+      stream: "stream-browserify",
+      os: "os-browserify/browser",
+      path: "path-browserify",
+      "@": path.resolve(__dirname, "./frontend"),
+    },
+  },
+  build: {
+    outDir: "dist", // Output directory
+  },
+  server: {
+    open: true,
+  },
+});
+
+```
+
+After making these changes, restart your development server:
+
+```bg-grey2/80 p-1 rounded-md text-grey5 before:!content-none after:!content-none normal-case hljs bash
+npm run dev
+
+```
+
+---
+/home/bojack/irys/irys_docs/build_d_migrating.md ---
+
+# Migrating to the Irys L1
+
+The Irys testnet is now live with support for permanent data uploads, and temporary data support coming soon. In the coming weeks, we’ll also introduce the [IrysVM](https://docs.irys.xyz/learn/why-build-on-irys/irysvm) and [Programmable Data](https://docs.irys.xyz/learn/why-build-on-irys/programmable-data). **Irys provides early access to all these new features for developers building on our platform.**
+
+At mainnet launch, all data uploaded to bundlers will be migrated from testnet to mainnet, with no changes to transaction IDs.
+
+ℹ️
+
+If you're not ready to migrate yet, you do not have to do anything. Irys's bundlers and gateway for Arweave will continue to operate as normal.
+
+## How to Migrate
+
+The new Irys Bundler SDK reduces dependency bloat by providing dedicated packages for each token. Previously, Irys used a single import statement and connection code regardless of token, with our new SDK, code is unique per token.
+
+**Migrating your code is simple and straight-forward.**
+
+### NodeJS
+
+Change This:
+
+```typescript
+import Irys from "@irys/sdk";
+
+const getIrys = async () => {
+	const irys = new Irys({
+		network: "mainnet",
+		token: "ethereum",
+		key: process.env.PRIVATE_KEY,
+	});
+	return irys;
+};
+```
+
+To This:
+
+```typescript
+import { Uploader } from "@irys/upload";
+import { Ethereum } from "@irys/upload-ethereum";
+
+const getIrysUploader = async () => {
+  const irysUploader = await Uploader(Ethereum).withWallet(process.env.PRIVATE_KEY);
+  return irysUploader;
+};
+```
+
+ℹ️
+
+The above code is for ethereum only, [we also have examples](https://docs.irys.xyz/build/d/sdk/setup) covering all supported tokens.
+
+### Browser
+
+Change This:
+
+```typescript
+import { WebIrys } from "@irys/sdk";
+import { ethers } from "ethers";
+
+const getWebIrys = async () => {
+	await window.ethereum.enable();
+	const provider = new providers.Web3Provider(window.ethereum);
+	const wallet = { rpcUrl: rpcUrl, name: "ethersv5", provider: provider };
+	const webIrys = new WebIrys({ network: "mainnet", token: "ethereum", wallet });
+	await webIrys.ready();
+
+	return webIrys;
+};
+```
+
+To This:
+
+```typescript
+import { WebUploader } from "@irys/web-upload";
+import { WebEthereum } from "@irys/web-upload-ethereum";
+import { EthereumEthersv5 } from "@irys/web-upload-ethereum-ethers-v5";
+
+const getIrysUploader = async () => {
+  const provider = new ethers.providers.Web3Provider(window.ethereum);
+  const irysUploader = await WebUploader(WebEthereum).withProvider(EthereumEthersv5(provider));
+  return irysUploader;
+};
+```
+
+ℹ️
+
+The above code is for ethereum with ethers v5 only, [we also have examples](https://docs.irys.xyz/build/d/irys-in-the-browser) covering all supported tokens and providers.
+
+## Support
+
+Need help or just have questions? Come [find us in Discord](https://discord.gg/irys).
+
+---
+/home/bojack/irys/irys_docs/build_d_networks.md ---
+
+{
+  "networks": [
+    {
+      "name": "Mainnet",
+      "description": "Uploads are paid for with real tokens. At mainnet L1 launch, all data uploaded to these bundlers will be uploaded to mainnet, with no changes to transaction IDs."
+    },
+    {
+      "name": "Devnet",
+      "description": "Uploads are paid for with free faucet tokens. Data is deleted after ~60 days."
+    }
+  ],
+  "testnet": {
+    "name": "L1 testnet",
+    "description": "An L1 testnet for testing purposes."
+  },
+  "connectingToMainnet": {
+    "codeSnippet": "import { Uploader } from \"@irys/upload\";\nimport { Ethereum } from \"@irys/upload-ethereum\";\n
+const getIrysUploader = async () => {
+  const irysUploader = await Uploader(Ethereum).withWallet(process.env.PRIVATE_KEY);
+  return irysUploader;
+};"
+  },
+  "connectingToDevnet": {
+    "codeSnippet": "import { Uploader } from \"@irys/upload\";\nimport { Ethereum } from \"@irys/upload-ethereum\";\n
+const getIrysUploader = async () => {
+  const rpcURL = \"\";
+  const irysUploader = await Uploader(Ethereum)
+    .withWallet(process.env.PRIVATE_KEY)
+    .withRpc(rpcURL)
+    .devnet();
+  return irysUploader;
+};
+"
+  }
+}
+```
+
+---
+/home/bojack/irys/irys_docs/build_d_quickstart.md ---
+
+# Irys SDK
+
+## Installing
+
+This example uses ETH for payment. You can use any of the [supported tokens](https://docs.irys.xyz/build/d/features/supported-tokens).
+
+Install using npm:
+
+```bash
+npm install @irys/upload @irys/upload-ethereum
+```
+
+## Connecting to the network
+
+The following code is for using ETH for payment, we [also have examples covering all supported tokens](https://docs.irys.xyz/build/d/sdk/setup).
+
+```typescript
+import { Uploader } from "@irys/upload";
+import { Ethereum } from "@irys/upload-ethereum";
+
+const getIrysUploader = async () => {
+  const irysUploader = await Uploader(Ethereum).withWallet(process.env.PRIVATE_KEY);
+  return irysUploader;
+};
+```
+
+## Funding Irys
+
+Fund your account on the Irys network using any of our [supported tokens](https://docs.irys.xyz/build/d/features/supported-tokens):
+
+```javascript
+const fundAccount = async () => {
+	const irysUploader = await getIrysUploader();
+	try {
+		const fundTx = await irysUploader.fund(irysUploader.utils.toAtomic(0.05));
+		console.log(`Successfully funded ${irysUploader.utils.fromAtomic(fundTx.quantity)} ${irysUploader.token}`);
+	} catch (e) {
+		console.log("Error when funding ", e);
+	}
+};
+```
+
+## Uploading
+
+### Uploading Data
+
+```javascript
+const uploadData = async () => {
+	const irysUploader = await getIrysUploader();
+	const dataToUpload = "hirys world.";
+	try {
+		const receipt = await irysUploader.upload(dataToUpload);
+		console.log(`Data uploaded ==> https://gateway.irys.xyz/${receipt.id}`);
+	} catch (e) {
+		console.log("Error when uploading ", e);
+	}
+};
+```
+
+### Uploading a File
+
+```javascript
+const uploadFile = async () => {
+	const irysUploader = await getIrysUploader();
+	// Your file
+	const fileToUpload = "./myImage.png";
+
+	const tags = [{ name: "application-id", value: "MyNFTDrop" }];
+
+	try {
+		const receipt = await irysUploader.uploadFile(fileToUpload, { tags: tags });
+		console.log(`File uploaded ==> https://gateway.irys.xyz/${receipt.id}`);
+	} catch (e) {
+		console.log("Error when uploading ", e);
+	}
+};
+```
+
+### Uploading a Folder
+
+You can upload a group of files as a single transaction from both the server and the browser.
+
+ℹ️
+
+When [uploading a folder](https://docs.irys.xyz/build/d/sdk/upload/uploadFolder), files can be accessed either directly at
+`https://gateway.irys.xyz/:transactionId` or `https://gateway.irys.xyz/:manifestId/:fileName`
+
+```javascript
+const uploadFolder = async () => {
+	const irysUploader = await getIrysUploader();
+
+	// Upload an entire folder
+	const folderToUpload = "./my-images/"; // Path to folder
+	try {
+		const receipt = await irysUploader.uploadFolder("./" + folderToUpload, {
+			indexFile: "", // Optional index file (file the user will load when accessing the manifest)
+			batchSize: 50, // Number of items to upload at once
+			keepDeleted: false, // whether to keep now deleted items from previous uploads
+		}); // Returns the manifest ID
+
+		console.log(`Files uploaded. Manifest ID ${receipt.id}`);
+	} catch (e) {
+		console.log("Error when uploading ", e);
+	}
+};
+```
+
+## 3rd-Party Build Tools
+
+### Parcel
+
+If using [Parcel](https://parceljs.org/), you will need to [manually enable package exports](https://parceljs.org/features/dependency-resolution/#package-exports) by adding the following to the `package.json` file in your project root directory.
+
+```json
+{
+	"@parcel/resolver-default": {
+		"packageExports": true
+	}
+}
+```
+
+---
+/home/bojack/irys/irys_docs/build_d_storage-cli_commands_balance.md ---
+
+```json
+{
+  "date": "2025-09-03T09:19:59.208Z",
+  "title": "Irys | balance",
+  "url": "https://docs.irys.xyz/build/d/storage-cli/commands/balance",
+  "description": "Returns the amount of funds available on the specified node. Provide your public wallet address as an argument, along with parameters for network, token, and provider URL.",
+  "parameters": [
+    {
+      "option": "-n",
+      "description": "The network to check, 'mainnet' or 'devnet', defaults to 'mainnet'."
+    },
+    {
+      "option": "-t",
+      "description": "The token to use when funding."
+    },
+    {
+      "option": "--provider-url",
+      "description": "RPC URL to use."
+    }
+  ],
+  "examples": [
+    {
+      "network": "Mainnet",
+      "command": "irys balance 0x591B5Ce7cA10a55A9B5d1516eF89693D5b3586b8 -t ethereum"
+    },
+    {
+      "network": "Devnet",
+      "command": "irys balance 0x591B5Ce7cA10a55A9B5d1516eF89693D5b3586b8 -t ethereum -n devnet --provider-url https://rpc.sepolia.dev"
+    }
+  ],
+  "note": "RPC URLs change often, use a recent one from https://chainlist.org/"
+}
+```
+
+---
+/home/bojack/irys/irys_docs/build_d_storage-cli_commands_upload.md ---
+
+```json
+{
+  "title": "Irys | upload",
+  "description": "Uploads a single file.",
+  "parameters": {
+    "-n": "The network to check, 'mainnet' or 'devnet', defaults to 'mainnet'.",
+    "-t": "The token to use when funding.",
+    "-w": "Your private key.",
+    "--tags": "Tags to include, format <name> <value>.",
+    "--provider-url": "RPC URL to use."
+  },
+  "examples": {
+    "mainnet": "irys upload myImage.png -t ethereum -w bf20......c9885307 --tags tagName1 tagValue1 tagName2 tagValue2",
+    "devnet": "irys upload myImage.png -n devnet -t ethereum -w bf20......c9885307 --tags tagName1 tagValue1 tagName2 tagValue2 --provider-url https://rpc.sepolia.dev"
+  },
+  "downloading": "Files uploaded via 'irys upload' can be downloaded using the transaction ID provided after a successful upload.",
+  "metadata": {
+    "og:image": "https://docs.irys.xyz/opengraph-image.png?8c892bc9b92ee1a8",
+    "og:title": "Irys | upload",
+    "language": "en",
+    "url": "https://docs.irys.xyz/build/d/storage-cli/commands/upload",
+    "favicon": "https://docs.irys.xyz/favicon.ico"
+  }
+}
+```
+
+---
+/home/bojack/irys/irys_docs/build_d_storage-cli_installation.md ---
+
+# Installation
+
+Install using npm with the -g global flag.
+
+```bash
+npm i -g @irys/cli
+```
+
+Depending on your setup, you may need to use the sudo command.
+
+```bash
+sudo npm i -g @irys/cli
+```
+
+ℹ️
+
+If you get an error while installing, append the `--force` flag to the end of the above command.
+
+---
+/home/bojack/irys/irys_docs/build_programmability_connecting-to-testnet.md ---
+
+```json
+{
+  "title": "Irys | Connecting to the Testnet",
+  "networkRPC": {
+    "node": "testnet-rpc.irys.xyz",
+    "wallet": "wallet.irys.xyz",
+    "explorer": "testnet-explorer.irys.xyz",
+    "description": "The chain is EVM compatible so you can use all standard EVM tooling including Metamask. The network also has custom endpoints for all datachain related activity."
+  },
+  "chainInfo": {
+    "ticker": "IRYS",
+    "atomicUnit": "mIRYS (mini IRYS)",
+    "decimals": 18,
+    "chainID": 1270,
+    "jsonRPCURL": "https://testnet-rpc.irys.xyz/v1/execution-rpc"
+  },
+  "connectingWithEthers": "const irysClient = await new IrysClient(\"https://testnet-rpc.irys.xyz/v1\")\nconst provider = irysClient.api.rpcProvider\n// or\nconst provider = new JsonRpcProvider(\"https://testnet-rpc.irys.xyz/v1/execution-rpc\")\n
+const balance = await provider.getBalance(\"<address>")"
+}
+```
+
+---
+/home/bojack/irys/irys_docs/build_programmability_introduction.md ---
+
+```json
+{
+  "title": "Irys | Our alpha testnet is live!",
+  "description": "With our testnet live you can store data directly on the L1, build apps with IrysVM and Programmable Data",
+  "sections": [
+    {
+      "heading": "IrysVM",
+      "content": "As a fork of the Ethereum Virtual Machine (EVM), the Irys Virtual Machine (IrysVM) leverages the unique capabilities of the Irys blockchain by integrating access to its advanced storage layer, unlocking the potential for Programmable Data."
+    },
+    {
+      "heading": "Programmable Data",
+      "content": "Programmable Irys unlocks a new paradigm where data can be actively used and manipulated in real-time by smart contracts. With Programmable Data, Irys integrates cost-effective data storage and smart-contract functionality, enabling dApps and services to interact programmatically with large amounts of onchain data within a single protocol and ecosystem. This streamlines development, lowers costs, and unlocks unprecedented composability, overcoming the limitations of fragmented integrations."
+    }
+  ],
+  "metadata": {
+    "ogImage": "https://docs.irys.xyz/opengraph-image.png?8c892bc9b92ee1a8",
+    "twitterImage": "https://docs.irys.xyz/opengraph-image.png?8c892bc9b92ee1a8",
+    "language": "en",
+    "favicon": "https://docs.irys.xyz/favicon.ico",
+    "sourceURL": "https://docs.irys.xyz/build/programmability/introduction"
+  }
+}
+```
+
+---
+/home/bojack/irys/irys_docs/build_programmability_js_addresses.md ---
+
+```json
+{
+  "title": "Irys | Addresses",
+  "url": "https://docs.irys.xyz/build/programmability/js/addresses",
+  "content": "Irys uses two address formats, one base58 encoded (i.e `2QZrWyPPi4XukwiJQrVmUvuPQ57F`) known as the `Irys address`, and one hex encoded (i.e `0x64f1a2829e0e698c18e7792d6e74f67d89aa0a32`), the `Execution address` - which is a traditional EVM address. Both address types are cross-convertable, with the execution address being a hex encoding of the decoded Irys address bytes. `@irys/js` has some conversion utilities you can use: ``` import {irysToExecAddr, execToIrysAddr } from \"@irys/js/common/utils\" const irysAddress = \"2QZrWyPPi4XukwiJQrVmUvuPQ57F\"; const execAddress = \"0x64f1a2829e0e698c18e7792d6e74f67d89aa0a32\" irysToExecAddr(irysAddress) //  \"0x64f1a2829e0e698c18e7792d6e74f67d89aa0a32\" execToIrysAddr(execAddress) //  \"2QZrWyPPi4XukwiJQrVmUvuPQ57F\" ``` Irys & execution addresses are derived using the same private key, so your Irys execution address will be identical to your usual EVM one."
+}
+```
+
+---
+/home/bojack/irys/irys_docs/build_programmability_js_quickstart.md ---
+
+{
+  "title": "Irys | Quickstart",
+  "url": "https://docs.irys.xyz/build/programmability/js/quickstart",
+  "sections": [
+    {
+      "heading": "Install",
+      "content": "yarn install @irys/js"
+    },
+    {
+      "heading": "Grab some tokens!",
+      "content": "The testnet faucet can be found [here](https://irys.xyz/faucet)"
+    },
+    {
+      "heading": "Create the client",
+      "content": "const irysClient = await new IrysClient(\"https://testnet-rpc.irys.xyz/v1\")"
+    },
+    {
+      "heading": "Get your Irys address",
+      "content": "Irys uses the same private keys as Ethereum\nconst { irys: irysAddress } = irysClient.account.getAddresses(\"private key\")"
+    },
+    {
+      "heading": "Check your balance",
+      "content": "const balancemIrys = await irysClient.account.getBalance(\"address\") // you can use either your Irys or execution address!"
+    },
+    {
+      "heading": "Create and post a data transaction",
+      "content": "// Create a transaction\nconst tx = irysClient.createTransaction({...}) // the args are optional\n// Generates merkle tree for the data
+await tx.prepareChunks (<data>);
+// Check the price (in mIrys) for uploading your transaction.
+// Irys transactions have two fees, a term and a perm fee.
+// perm is only for if you want to store your data permanently (i.e ledger 0)
+// Testnet currently only supports `perm` transactions.
+const { termFee, permFee } = await tx.getFees();
+// get the combined fee
+const fee = await tx.getFee();
+// Sign the transaction with your private key
+const signedTx = await tx.sign (<key>);
+// Upload the transaction header
+await signedTx.uploadHeader();
+// Upload the data
+await signedTx.uploadChunks (<data>);"
+    }
+  ]
+}
+
+---
+/home/bojack/irys/irys_docs/build_programmability_programmable-data.md ---
+
+# Programmable data quickstart
+
+ℹ️
+
+This guide assumes you're decently familiar with solidity smart contract development.
+
+#### Create a programmable data smart contract
+
+Programmable data is a feature leveraged through Solidity smart contracts via a custom precompile.
+
+We have a library contract to provide a cleaner API to use programmable data [here](https://github.com/Irys-xyz/precompile-libraries/)
+
+A full example Foundry project [here](https://github.com/Irys-xyz/irys/blob/master/fixtures/contracts/src/IrysProgrammableDataBasic.sol)
+
+And an example E2E test using `@irys/js` [here](https://github.com/Irys-xyz/irys-js/blob/master/tests/programmableData.ts)
+
+To use this library, first create a Solidity contract that inherits `ProgrammableData`:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20; 
+
+// you will need to set up path remapping and clone the repository as a submodule,
+// or copy the library files locally
+
+import "@irys/precompile-libraries/libraries/ProgrammableData.sol";
+
+contract ProgrammableDataBasic is ProgrammableData {
+    bytes public storedData;
+
+    function readPdBytesIntoStorage() public {
+        (bool success, bytes memory data) = readBytes();
+        require(success, "reading bytes failed");
+        // write bytes to storage
+        storedData = data;
+    }
+
+    function getStorage() public view returns (bytes memory) {
+        return storedData;
+    }
+}
+```
+
+You then need to deploy your smart contract as normal.
+
+To create a programmable data transaction (which will allow use of the ProgrammableData precompile), follow the following steps:
+
+#### Create a set of Programmable Data read ranges
+
+```typescript
+const accessList = await irysClient.programmable_data
+    .read(transactionId, startOffset, length)
+    .toAccessList();
+```
+
+ℹ️
+
+Only transactions uploaded to the permanent ledger (ledgerId 0) can be read using programmable data.
+
+DataItems uploaded through Irys' bundlers are currently not supported (but will be!)
+
+#### Add them to a execution Transaction
+
+This should be a transaction aiming to call the `readPdBytesIntoStorage` method of the contract.
+
+ℹ️
+
+You will be charged for every chunk you request, even if you don't read them.
+
+So only attach a programmable data access list to a transaction that will use them!
+
+```typescript
+import { Wallet } from "ethers";
+const wallet = new Wallet (<key>, irysClient.api.rpcProvider)
+const evmTransaction = {
+    accessList: [accessList],
+    type: 2 // type must be EIP-1559 or higher
+    ....
+}
+await wallet.sendTransaction(evmTransaction);
+```
+
+Once the transaction processes, you can call the `getStorage` contract method, which should return the data you specified in your programmable data read range.
+
+Note that you will pay normal rates for storing data in smart contract storage slots.
+
+---
+/home/bojack/irys/irys_docs/build_welcome-builders.md ---
+
+{
+  "date": "2025-09-03T09:13:19.759Z",
+  "title": "Irys | Learn more about Irys",
+  "description": "A Note From Our Founder: 
+
+"Hirys, and welcome to our alpha testnet— you're dangerously early."
+
+If you're wondering who we are, let me fill you in. We're Irys, the world's first programmable datachain.
+
+**Datachain** means we're an L1 that incentivizes storage.
+
+**Programmable** means that data on Irys is composable. On Irys, smart contracts will be able to natively **access** (read), **manipulate** (validate, reference, or evolve), and **write** back to the storage layer (output)—all within a single protocol.
+
+Our alpha testnet is live as of September 2nd, 2024, starting with support for permanent data uploads. Over the coming weeks, we'll be rolling out the IrysVM, temporary data, and programmable data.",
+  "image": "https://docs.irys.xyz/build/img/josh-sig.png",
+  "links": {
+    "explorer": "https://explorer.irys.xyz/",
+    "github": "https://github.com/Irys-xyz/",
+    "discord": "https://discord.gg/irys/"
+  },
+  "metadata": {
+    "ogTitle": "Irys | Learn more about Irys",
+    "ogImage": "https://docs.irys.xyz/opengraph-image.png?8c892bc9b92ee1a8",
+    "language": "en",
+    "favicon": "https://docs.irys.xyz/favicon.ico",
+    "url": "https://docs.irys.xyz/build/welcome-builders"
+  }
+}
+
+
+---
+End of content ---
