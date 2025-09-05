@@ -1,0 +1,165 @@
+# Irys Documentation Summary (LLM_Full.txt)
+
+This document provides a comprehensive summary of the Irys documentation files located in the `irys_docs/` directory.
+
+---
+
+### `build_d_features_balance-approvals.md`
+
+**Summary:** This document explains the "Balance Approvals" feature, which allows users to share their Irys balance with other addresses. This is useful for onboarding users without requiring them to own tokens directly. The paying user can approve a certain amount to be spent by another user's address. The document provides code examples for creating, revoking, and querying approvals using the Irys SDK. It also shows the HTTP endpoint for querying approvals.
+
+---
+
+### `build_d_features_mutability.md`
+
+**Summary:** This document describes how to achieve data mutability on the otherwise immutable Irys network. It details the concept of "mutable references," where a static URL (`https://gateway.irys.xyz/mutable/:txId`) can point to a sequence of transactions. By uploading a new transaction with a `Root-TX` tag pointing to the original transaction ID, the URL will automatically resolve to the latest transaction in the chain. This is useful for dynamic NFTs, software distribution, and website hosting. A GraphQL query example is provided to retrieve the entire version chain.
+
+---
+
+### `build_d_features_onchain-folders.md`
+
+**Summary:** This document explains "Onchain Folders," a feature for organizing Irys transactions using logical names instead of transaction IDs. A manifest file maps human-readable paths to specific transaction IDs. These folders can be created automatically using `uploadFolder()` in the SDK or manually by creating a map. The document also touches on "Mutable Onchain Folders," which allow for adding new files to an existing folder by updating the manifest in a transaction chain.
+
+---
+
+### `build_d_features_receipts.md`
+
+**Summary:** This document details Irys receipts, which provide cryptographic proof of the exact time a transaction was posted, accurate to the millisecond. Receipts are crucial for applications requiring strict ordering, like decentralized social media or messaging. The document explains the receipt format (a JSON object), how to verify a receipt's signature using the SDK, and that receipts can be permanently stored on Irys by re-uploading them.
+
+---
+
+### `build_d_features_supported-tokens.md`
+
+**Summary:** This file provides a list of all supported cryptocurrencies for paying transaction fees on Irys, for both Mainnet and Devnet. It's structured as a JSON object with tables for each network. Each entry includes the token's blockchain, its symbol (e.g., ETH, MATIC, SOL), the parameter value to be used in the SDK/CLI, and its support status for different environments (Node.js, browser).
+
+---
+
+### `build_d_features_tags.md`
+
+**Summary:** This document explains the use of metadata tags in Irys transactions. Tags are key-value pairs that can be attached to any upload. They are indexed and queryable via GraphQL, making it easy to categorize and search for data. A common use case is the `Content-Type` tag, which tells browsers how to render a file. Users can add up to 20 tags per transaction.
+
+---
+
+### `build_d_graphql.md`
+
+**Summary:** This document provides instructions on how to query Irys transaction metadata using GraphQL. It specifies the GraphQL endpoint (`https://uploader.irys.xyz/graphql`) and details the available query arguments (e.g., `ids`, `owner`, `tags`, `timestamp`) and the fields returned in the results (e.g., `id`, `address`, `tags`, `receipt`). Sample queries are included to demonstrate how to search by transaction ID and timestamp.
+
+---
+
+### `build_d_guides_irys-react.md`
+
+**Summary:** This is a step-by-step guide for integrating the Irys SDK into a React application created with `create-react-app`. It highlights the need for additional configuration due to Webpack 5 no longer including Node.js polyfills by default. The guide covers installing dependencies (`@irys/web-upload`, `ethers`, etc.), installing `react-app-rewired` and various polyfill packages, creating a `config-overrides.js` file to inject the polyfills into the Webpack config, and modifying the `package.json` scripts to use `react-app-rewired`.
+
+---
+
+### `build_d_guides_uploading-nfts.md`
+
+**Summary:** This guide explains the process of creating an NFT by storing its assets and metadata on Irys. The process involves three main steps: 1) Upload the NFT asset (e.g., an image) to Irys to get a permanent URL. 2) Create a JSON metadata file that includes the asset's URL. 3) Upload the metadata file to Irys. The final URL from the metadata upload is then used to mint the NFT on a blockchain. Code examples are provided for both the Irys SDK and the CLI.
+
+---
+
+### `build_d_guides_vite.md`
+
+**Summary:** This guide provides instructions for using the Irys SDK with a React project set up using Vite. Similar to the `create-react-app` guide, it addresses the need for Node.js polyfills, which Vite does not include by default. It details installing the Irys SDK and Ethers, installing `vite-plugin-node-polyfills`, and configuring the `vite.config.js` file to use the polyfill plugin and set up aliases for Node.js core modules. An example `App.tsx` component is provided.
+
+---
+
+### `build_d_irys-in-the-browser.md`
+
+**Summary:** This document is a comprehensive guide to using the Irys SDK in a browser environment. It explains that the SDK is modular, with dedicated packages for different tokens and wallet providers to reduce bundle size. It provides specific installation commands and code snippets for connecting to Irys from various EVM chains (using Ethers v5, Ethers v6, and Viem v2) and other chains like Solana and Aptos. It lists the different `Web*` classes (e.g., `WebEthereum`, `WebMatic`) to be used for payments with different tokens.
+
+---
+
+### `build_d_migrating.md`
+
+**Summary:** This document provides instructions for developers migrating from the older Irys SDK to the new, modular Irys Bundler SDK. It shows side-by-side code comparisons for both NodeJS and browser environments, demonstrating the changes in import statements and initialization code. The old SDK used a single `@irys/sdk` package, while the new one uses separate packages like `@irys/upload` and `@irys/upload-ethereum`.
+
+---
+
+### `build_d_networks.md`
+
+**Summary:** This document outlines the different Irys networks available: Mainnet (for real, permanent uploads) and Devnet (for testing with free tokens, data is pruned). It also mentions the L1 testnet. It provides code snippets for connecting to Mainnet and Devnet using the SDK, showing how to use the `.devnet()` method for the latter.
+
+---
+
+### `build_d_quickstart.md`
+
+**Summary:** This is a quickstart guide for the Irys SDK in a Node.js environment. It covers installation (`@irys/upload`, `@irys/upload-ethereum`), connecting to the network, funding an Irys account, and uploading data, a single file, and an entire folder. It provides clear, concise code examples for each step.
+
+---
+
+### `build_d_rest-api_account.md`, `build_d_rest-api_general.md`, `build_d_rest-api_transactions.md`
+
+**Summary:** These files list the available Irys REST API endpoints. 
+- **Account API:** Routes for managing accounts, such as checking balances (`/account/balance/{token}`) and withdrawing funds.
+- **General API:** Routes for getting general information about the bundler, such as status and public key (`/info`, `/status`).
+- **Transaction API:** Routes for posting transactions (`/tx`) and querying transaction details, such as status, tags, and data (`/tx/{txId}`).
+
+---
+
+### `build_d_sdk_chunked-uploader_expired-uploads.md`
+
+**Summary:** This document provides a code snippet for resuming an expired chunked upload. If a large upload is paused for too long, it expires. The `uploader.getResumeData()` and `uploader.setResumeData()` methods can be used to recover and continue the upload.
+
+---
+
+### `build_d_sdk_payment_getBalance.md`
+
+**Summary:** This document explains the `getBalance()` function in the Irys SDK. It returns the wallet's funded balance on the Irys node in atomic units. A code example shows how to retrieve the balance and convert it to standard units using `irys.utils.fromAtomic()`.
+
+---
+
+### `build_d_sdk_setup.md`
+
+**Summary:** This is a setup guide for the Irys SDK in a Node.js environment. It emphasizes the modular nature of the new SDK. It provides specific `npm install` commands and connection code snippets for a wide variety of supported tokens, including Aptos, Solana, and numerous EVM-compatible chains (Polygon, Arbitrum, BNB, etc.).
+
+---
+
+### `build_d_sdk_upload_upload.md`
+
+**Summary:** This document details the `irys.upload()` method. It explains the parameters (data, tags), the returned receipt object, and the fact that uploads under 100 KiB are free. A code example is provided for uploading a simple string.
+
+---
+
+### `build_d_storage-cli_commands_balance.md` & `build_d_storage-cli_commands_upload.md`
+
+**Summary:** These documents describe commands for the Irys CLI.
+- **`balance`**: Shows the funded balance for a given wallet address on a specified network and token.
+- **`upload`**: Uploads a single file. It requires parameters for the network, token, private key, and optional tags.
+Examples are provided for both Mainnet and Devnet.
+
+---
+
+### `build_programmability_connecting-to-testnet.md`
+
+**Summary:** This document provides the necessary details for connecting to the Irys L1 alpha testnet. It lists the network RPC endpoints, chain information (ChainID: 1270, Ticker: IRYS), and a code snippet for connecting using Ethers.js via the JSON-RPC URL.
+
+---
+
+### `build_programmability_introduction.md`
+
+**Summary:** This document introduces the Irys alpha testnet and its core concepts: the **IrysVM** (a fork of the EVM) and **Programmable Data**. Programmable Data allows smart contracts to natively access, manipulate, and write data within the Irys protocol, enabling powerful, on-chain data composition.
+
+---
+
+### `build_programmability_js_addresses.md`
+
+**Summary:** This document explains the two address formats on the Irys L1: the base58-encoded `Irys address` and the hex-encoded `Execution address` (a standard EVM address). It clarifies that both are derived from the same private key and are inter-convertible. It provides a code snippet showing the `@irys/js` utility functions `irysToExecAddr` and `execToIrysAddr` for conversion.
+
+---
+
+### `build_programmability_js_quickstart.md`
+
+**Summary:** This is a quickstart guide for the `@irys/js` library, used for interacting with the Irys L1 testnet. It covers installation, creating a client, getting an address, checking a balance, and the multi-step process for creating and posting a data transaction (create, prepare chunks, get fees, sign, upload header, upload chunks).
+
+---
+
+### `build_programmability_programmable-data.md`
+
+**Summary:** This is a technical quickstart for using the "Programmable Data" feature in Solidity smart contracts. It explains that developers can use a precompile to read data from permanently stored Irys transactions directly within a smart contract function. The process involves inheriting a `ProgrammableData` library contract, creating a read-range "access list" using the `@irys/js` SDK, and attaching that access list to an EVM transaction that calls the smart contract.
+
+---
+
+### `build_welcome-builders.md`
+
+**Summary:** This is a welcome message from the Irys founder. It introduces Irys as the "world's first programmable datachain," an L1 blockchain that incentivizes storage and allows data to be composable and interactive with smart contracts. It announces the alpha testnet launch and the planned rollout of the IrysVM and programmable data features.

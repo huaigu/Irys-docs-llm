@@ -1,0 +1,310 @@
+
+# Irys SDK & Tooling Summary for AI Coders
+
+This document provides a concise overview of Irys installation, configuration, and usage, focusing on EVM and React environments.
+
+---
+
+## 1. CLI Installation
+
+Install the Irys command-line interface for direct uploads and other operations.
+
+```bash
+# Install globally
+npm i -g @irys/cli
+
+# Use sudo if you have permission issues
+sudo npm i -g @irys/cli
+```
+*Source: `build_d_storage-cli_installation.md`*
+
+---
+
+## 2. Node.js Usage (EVM)
+
+### Quickstart (Ethereum)
+
+**Installation:**
+```bash
+npm install @irys/upload @irys/upload-ethereum
+```
+
+**Connecting (with private key):**
+```javascript
+import { Uploader } from "@irys/upload";
+import { Ethereum } from "@irys/upload-ethereum";
+
+const getIrysUploader = async () => {
+  // Make sure PRIVATE_KEY is loaded from environment variables
+  const irysUploader = await Uploader(Ethereum).withWallet(process.env.PRIVATE_KEY);
+  return irysUploader;
+};
+```
+
+**Funding:**
+```javascript
+const irysUploader = await getIrysUploader();
+// Fund with 0.05 ETH
+const fundTx = await irysUploader.fund(irysUploader.utils.toAtomic(0.05));
+console.log(`Successfully funded ${irysUploader.utils.fromAtomic(fundTx.quantity)} ${irysUploader.token}`);
+```
+
+**Uploading Data, Files, and Folders:**
+```javascript
+const irysUploader = await getIrysUploader();
+
+// Upload raw data
+const dataToUpload = "hirys world.";
+const receipt = await irysUploader.upload(dataToUpload);
+console.log(`Data uploaded ==> https://gateway.irys.xyz/${receipt.id}`);
+
+// Upload a single file with tags
+const fileToUpload = "./myImage.png";
+const tags = [{ name: "application-id", value: "MyNFTDrop" }];
+const fileReceipt = await irysUploader.uploadFile(fileToUpload, { tags });
+console.log(`File uploaded ==> https://gateway.irys.xyz/${fileReceipt.id}`);
+
+// Upload a folder
+const folderReceipt = await irysUploader.uploadFolder("./my-images/");
+console.log(`Folder uploaded. Manifest ID: ${folderReceipt.id}`);
+```
+*Source: `build_d_quickstart.md`*
+
+### Other EVM Chains (Node.js)
+
+The installation is the same for all EVM-based tokens. Import the specific token class from `@irys/upload-ethereum`.
+
+**Installation:**
+```bash
+npm install @irys/upload @irys/upload-ethereum
+```
+
+**Connecting (Example with Polygon/Matic):**
+```javascript
+import { Uploader } from "@irys/upload";
+import { Matic } from "@irys/upload-ethereum"; // Import the specific token class
+
+const getIrysUploader = async () => {
+  const irysUploader = await Uploader(Matic).withWallet(process.env.PRIVATE_KEY);
+  return irysUploader;
+};
+```
+**Supported EVM Token Classes:** `Arbitrum`, `Avalanche`, `Bera`, `BNB`, `Chainlink`, `Ethereum`, `BaseEth`, `LineaEth`, `ScrollEth`, `Iotex`, `Matic`, `USDCEth`, `USDCPolygon`.
+*Source: `build_d_sdk_setup.md`*
+
+---
+
+## 3. Browser/Frontend Usage (EVM)
+
+### React with `create-react-app`
+
+**Installation:**
+```bash
+npm install \
+    @irys/web-upload \
+    @irys/web-upload-ethereum \
+    @irys/web-upload-ethereum-ethers-v6 \
+    ethers@6 \
+    axios
+```
+
+**Polyfills & Rewiring (Required for Webpack 5+):**
+```bash
+# Install rewired and polyfills
+npm install react-app-rewired
+npm install --save-dev crypto-browserify stream-browserify assert stream-http https-browserify os-browserify url buffer process browserify-zlib path-browserify path
+npm install node-polyfill-webpack-plugin --save-dev
+```
+
+**Create `config-overrides.js`** in your project root:
+```javascript
+const NodePolyfillPlugin = require("node-polyfill-webpack-plugin");
+const webpack = require("webpack");
+
+module.exports = function override(config) {
+  config.plugins = (config.plugins || []).concat([
+    new NodePolyfillPlugin(),
+    new webpack.ProvidePlugin({
+      process: "process/browser.js",
+      Buffer: ["buffer", "Buffer"],
+    }),
+  ]);
+
+  config.resolve.fallback = {
+    ...config.resolve.fallback,
+    crypto: require.resolve("crypto-browserify"),
+    stream: require.resolve("stream-browserify"),
+    assert: require.resolve("assert"),
+    http: require.resolve("stream-http"),
+    https: require.resolve("https-browserify"),
+    os: require.resolve("os-browserify"),
+    url: require.resolve("url"),
+    zlib: require.resolve("browserify-zlib"),
+    path: require.resolve("path-browserify"),
+  };
+  
+  return config;
+};
+```
+
+**Update `package.json` scripts:**
+```json
+"scripts": {
+   "start": "react-app-rewired start",
+   "build": "react-app-rewired build",
+   "test": "react-app-rewired test",
+   "eject": "react-scripts eject"
+}
+```
+
+**Initialization in your React Component (Ethers v6):**
+```javascript
+import React, { useState } from "react";
+import { ethers } from "ethers";
+import { WebUploader } from "@irys/web-upload";
+import { WebEthereum } from "@irys/web-upload-ethereum";
+import { EthersV6Adapter } from "@irys/web-upload-ethereum-ethers-v6";
+
+function App() {
+  const connectIrys = async () => {
+    // Ensure window.ethereum is available
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const irysUploader = await WebUploader(WebEthereum).withAdapter(EthersV6Adapter(provider));
+    console.log(`Connected to Irys: ${irysUploader.address}`);
+  };
+  // ...
+}
+```
+*Source: `build_d_guides_irys-react.md`*
+
+### React with Vite
+
+**Installation:**
+```bash
+npm install \
+    @irys/web-upload \
+    @irys/web-upload-ethereum \
+    @irys/web-upload-ethereum-ethers-v6 \
+    ethers@6 \
+    axios
+```
+
+**Polyfills for Vite:**
+```bash
+npm install --save-dev \
+    crypto-browserify \
+    stream-browserify \
+    os-browserify \
+    path-browserify \
+    vite-plugin-node-polyfills
+```
+
+**Update `vite.config.js`:**
+```javascript
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { nodePolyfills } from "vite-plugin-node-polyfills";
+
+export default defineConfig({
+  plugins: [
+    react(),
+    nodePolyfills({
+      globals: {
+        Buffer: true,
+        global: true,
+        process: true,
+      },
+      protocolImports: true,
+    }),
+  ],
+  resolve: {
+    alias: {
+      crypto: "crypto-browserify",
+      stream: "stream-browserify",
+      os: "os-browserify/browser",
+      path: "path-browserify",
+    },
+  },
+});
+```
+**Initialization is the same as the `create-react-app` example.**
+*Source: `build_d_guides_vite.md` & `build_d_irys-in-the-browser.md`*
+
+### General Browser Usage (Ethers, Viem)
+
+The token class determines payment (e.g., `WebEthereum`, `WebMatic`). The adapter connects to the user's wallet provider.
+
+**Ethers v6 Example:**
+- **Install:** `npm install @irys/web-upload @irys/web-upload-ethereum @irys/web-upload-ethereum-ethers-v6 ethers@6`
+- **Connect:**
+  ```javascript
+  import { WebUploader } from "@irys/web-upload";
+  import { WebEthereum } from "@irys/web-upload-ethereum";
+  import { EthersV6Adapter } from "@irys/web-upload-ethereum-ethers-v6";
+  import { ethers } from "ethers";
+
+  const provider = new ethers.BrowserProvider(window.ethereum);
+  const irysUploader = await WebUploader(WebEthereum).withAdapter(EthersV6Adapter(provider));
+  ```
+
+**Viem v2 Example:**
+- **Install:** `npm install @irys/web-upload @irys/web-upload-ethereum @irys/web-upload-ethereum-viem-v2 viem`
+- **Connect:**
+  ```javascript
+  import { WebUploader } from "@irys/web-upload";
+  import { WebEthereum } from "@irys/web-upload-ethereum";
+  import { ViemV2Adapter } from "@irys/web-upload-ethereum-viem-v2";
+  import { createWalletClient, createPublicClient, custom } from "viem";
+  import { mainnet } from "viem/chains";
+
+  const [account] = await window.ethereum.request({ method: "eth_requestAccounts" });
+  const walletClient = createWalletClient({ account, chain: mainnet, transport: custom(window.ethereum) });
+  const publicClient = createPublicClient({ chain: mainnet, transport: custom(window.ethereum) });
+  const irysUploader = await WebUploader(WebEthereum).withAdapter(ViemV2Adapter(walletClient, { publicClient }));
+  ```
+**Supported Web Token Classes:** `WebMatic`, `WebBNB`, `WebAvalanche`, `WebBaseEth`, `WebUSDCEth`, `WebArbitrum`, `WebChainlink`, `WebUSDCPolygon`, `WebBera`, `WebScrollEth`, `WebLineaEth`, `WebIotex`, `WebEthereum`.
+*Source: `build_d_irys-in-the-browser.md`*
+
+---
+
+## 4. Programmability (Irys L1)
+
+For interacting with the Irys L1 testnet, IrysVM, and programmable data.
+
+**Installation:**
+```bash
+yarn install @irys/js
+```
+
+**Connecting to Testnet:**
+```javascript
+import { IrysClient } from "@irys/js";
+
+const irysClient = await new IrysClient("https://testnet-rpc.irys.xyz/v1");
+```
+
+**Address Conversion:**
+Irys uses two address formats: a base58 `Irys address` and a hex `Execution address` (standard EVM).
+```javascript
+import { irysToExecAddr, execToIrysAddr } from "@irys/js/common/utils";
+
+const irysAddress = "2QZrWyPPi4XukwiJQrVmUvuPQ57F";
+const execAddress = irysToExecAddr(irysAddress); // 0x...
+```
+
+**Basic Usage:**
+```javascript
+// Get balance (mIrys)
+const balance = await irysClient.account.getBalance("your_address");
+
+// Create and upload a transaction
+const tx = irysClient.createTransaction({ data: "some data" });
+await tx.prepareChunks();
+const fee = await tx.getFee(); // Get combined fee
+// On testnet, you don't need to fund, but on mainnet you would.
+const signedTx = await tx.sign("your_private_key");
+await signedTx.uploadHeader();
+await signedTx.uploadChunks();
+```
+*Source: `build_programmability_js_quickstart.md`, `build_programmability_js_addresses.md`*
+
