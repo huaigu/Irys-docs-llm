@@ -8,6 +8,8 @@ This repository downloads the complete official documentation for Irys and proce
 
 The primary goal is to provide AI tools with a comprehensive and up-to-date knowledge base of the Irys SDK and its functionalities.
 
+For a comprehensive developer guide, see: [Irys Web3 Developer Guide](./Irys-Web3-Developer-Guide.md)
+
 ## Generated Files
 
 This process generates two main files:
